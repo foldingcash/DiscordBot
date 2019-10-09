@@ -4,42 +4,70 @@
     using System.Threading.Tasks;
 
     using Discord;
+    using Discord.Commands;
+    using Discord.WebSocket;
 
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Hosting;
 
     public class DiscordBot : IHostedService
     {
+        private readonly ICommandService commandService;
+
         private readonly IConfiguration configuration;
 
-        private DiscordClient discordClient;
+        private DiscordSocketClient client;
 
-        public DiscordBot(IConfiguration configuration)
+        public DiscordBot(IConfiguration configuration, ICommandService commandService)
         {
             this.configuration = configuration;
+            this.commandService = commandService;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            string discordToken = GetDiscordToken();
+            try
+            {
+                await commandService.AddModulesAsync();
+                client = new DiscordSocketClient(new DiscordSocketConfig());
 
-            discordClient = new DiscordClient();
-            await discordClient.Connect(discordToken, TokenType.Bot);
+                await client.LoginAsync(TokenType.Bot, GetToken());
+                await client.StartAsync();
+
+                client.MessageReceived += HandleMessageReceived;
+            }
+            finally
+            {
+                await StopAsync(cancellationToken);
+            }
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            if (discordClient is null)
-                return;
-
-            await discordClient?.Disconnect();
-            discordClient?.Dispose();
-            discordClient = null;
+            await client.StopAsync();
+            client.Dispose();
+            client = null;
         }
 
-        private string GetDiscordToken()
+        private string GetToken()
         {
             return configuration.GetSection("AppSettings")["Token"];
+        }
+
+        private async Task HandleMessageReceived(SocketMessage rawMessage)
+        {
+            // Ignore system messages and messages from bots
+            if (!(rawMessage is SocketUserMessage message)) return;
+            if (message.Source != MessageSource.User) return;
+
+            var argumentPosition = 0;
+            if (!message.HasMentionPrefix(client.CurrentUser, ref argumentPosition)) return;
+
+            var commandContext = new SocketCommandContext(client, message);
+            IResult result = await commandService.ExecuteAsync(commandContext, argumentPosition);
+
+            if (result.Error.HasValue && result.Error.Value != CommandError.UnknownCommand)
+                await commandContext.Channel.SendMessageAsync(result.ToString());
         }
     }
 }
