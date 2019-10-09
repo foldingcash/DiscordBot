@@ -57,17 +57,29 @@
         private async Task HandleMessageReceived(SocketMessage rawMessage)
         {
             // Ignore system messages and messages from bots
-            if (!(rawMessage is SocketUserMessage message)) return;
-            if (message.Source != MessageSource.User) return;
+            if (!(rawMessage is SocketUserMessage message))
+            {
+                return;
+            }
+
+            if (message.Source != MessageSource.User)
+            {
+                return;
+            }
 
             var argumentPosition = 0;
-            if (!message.HasMentionPrefix(client.CurrentUser, ref argumentPosition)) return;
+            if (!message.HasMentionPrefix(client.CurrentUser, ref argumentPosition))
+            {
+                return;
+            }
 
             var commandContext = new SocketCommandContext(client, message);
             IResult result = await commandService.ExecuteAsync(commandContext, argumentPosition);
 
             if (result.Error.HasValue && result.Error.Value != CommandError.UnknownCommand)
+            {
                 await commandContext.Channel.SendMessageAsync(result.ToString());
+            }
         }
     }
 }
