@@ -6,10 +6,10 @@
 
     public class DiscordBotModule : ModuleBase<SocketCommandContext>
     {
-        [Command("")]
+        [Command("test")]
         public async Task Help()
         {
-            await ReplyAsync("");
+            await ReplyAsync("hello world");
         }
     }
 }
