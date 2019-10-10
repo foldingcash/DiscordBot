@@ -1,5 +1,6 @@
 ﻿namespace DiscordBot.Core
 {
+    using System;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -9,6 +10,7 @@
 
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Hosting;
+    using Microsoft.Extensions.Logging;
 
     public class DiscordBot : IHostedService
     {
@@ -16,12 +18,15 @@
 
         private readonly IConfiguration configuration;
 
+        private readonly ILogger<DiscordBot> logger;
+
         private DiscordSocketClient client;
 
-        public DiscordBot(IConfiguration configuration, ICommandService commandService)
+        public DiscordBot(IConfiguration configuration, ICommandService commandService, ILogger<DiscordBot> logger)
         {
             this.configuration = configuration;
             this.commandService = commandService;
+            this.logger = logger;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -29,15 +34,16 @@
             try
             {
                 await commandService.AddModulesAsync();
-                client = new DiscordSocketClient(new DiscordSocketConfig());
+                client = new DiscordSocketClient();
 
                 await client.LoginAsync(TokenType.Bot, GetToken());
                 await client.StartAsync();
 
                 client.MessageReceived += HandleMessageReceived;
             }
-            finally
+            catch (Exception ex)
             {
+                logger.LogError(ex, "There was an unhandled exception during startup.");
                 await StopAsync(cancellationToken);
             }
         }

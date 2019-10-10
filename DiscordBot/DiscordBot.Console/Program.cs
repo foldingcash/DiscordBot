@@ -17,6 +17,9 @@
             return Host.CreateDefaultBuilder(args).ConfigureServices(services =>
             {
                 services.AddLogging().AddHostedService<DiscordBot>();
+
+                services.AddTransient<ICommandService, CommandProvider>();
+                services.AddTransient<IDiscordBotModuleService, DiscordBotModuleProvider>();
             });
         }
     }
