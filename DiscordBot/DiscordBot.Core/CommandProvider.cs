@@ -44,7 +44,7 @@
 
         public IEnumerable<CommandInfo> GetCommands()
         {
-            return innerService.Commands.Where(command => command.Name != "good bot");
+            return innerService.Commands.Where(command => command.Name != "good bot" && command.Name != "bad bot");
         }
 
         private string GetDevChannel()

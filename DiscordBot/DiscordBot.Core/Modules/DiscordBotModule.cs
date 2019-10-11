@@ -26,57 +26,63 @@
             return ReplyAsync(":D");
         }
 
+        [Command("bad bot")]
+        public Task AcknowledgeBadBot()
+        {
+            return ReplyAsync("D:");
+        }
+
         [Command("fah")]
-        [Alias("Download from Folding@Home to start folding today or update to the latest software")]
+        [Summary("Download from Folding@Home to start folding today or update to the latest software")]
         public Task GetFoldingAtHomeUrl()
         {
             return ReplyAsync(service.GetFoldingAtHomeUrl());
         }
 
         [Command("browser")]
-        [Alias("Download the folding browser to assist your journey into folding")]
+        [Summary("Download the folding browser to assist your journey into folding")]
         public Task GetFoldingBrowserUrl()
         {
             return ReplyAsync(service.GetFoldingBrowserUrl());
         }
 
         [Command("market")]
-        [Alias("Get the current market value of our token")]
+        [Summary("Get the current market value of our token")]
         public Task GetMarketValue()
         {
             return ReplyAsync(service.GetMarketValue());
         }
 
         [Command("distribution")]
-        [Alias("Get the date of our next distribution")]
+        [Summary("Get the date of our next distribution")]
         public Task GetNextDistributionDate()
         {
             return ReplyAsync(service.GetNextDistributionDate());
         }
 
         [Command("user")]
-        [Alias("Get user stats")]
+        [Summary("Get user stats")]
         public Task GetUserStats()
         {
             return ReplyAsync(service.GetUserStats());
         }
 
         [Command("nacl")]
-        [Alias("Use the web client to start folding today")]
+        [Summary("Use the web client to start folding today")]
         public Task GetWebClientUrl()
         {
             return ReplyAsync(service.GetWebClientUrl());
         }
 
         [Command("help")]
-        [Alias("Show the list of available commands")]
+        [Summary("Show the list of available commands")]
         public async Task Help()
         {
             await ReplyAsync(service.Help());
         }
 
         [Command("lookup")]
-        [Alias("Search for a user")]
+        [Summary("Search for a user")]
         public Task LookupUser()
         {
             return ReplyAsync(service.LookupUser());

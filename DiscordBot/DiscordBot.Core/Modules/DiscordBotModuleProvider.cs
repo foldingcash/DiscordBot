@@ -58,7 +58,7 @@
 
             foreach (CommandInfo command in commandList)
             {
-                builder.AppendLine($"  {string.Join(" - ", command.Aliases)}");
+                builder.AppendLine($"  {command.Name} - {command.Summary}");
             }
 
             return builder.ToString();
