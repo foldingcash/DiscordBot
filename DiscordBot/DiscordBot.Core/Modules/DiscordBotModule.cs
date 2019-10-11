@@ -20,52 +20,66 @@
             this.logger = logger;
         }
 
-        [Command("fah")]
-        public async Task GetFoldingAtHomeUrl()
+        [Command("good bot")]
+        public Task AcknowledgeGoodBot()
         {
-            await ReplyAsync(service.GetFoldingAtHomeUrl());
+            return ReplyAsync(":D");
+        }
+
+        [Command("fah")]
+        [Alias("Download from Folding@Home to start folding today or update to the latest software")]
+        public Task GetFoldingAtHomeUrl()
+        {
+            return ReplyAsync(service.GetFoldingAtHomeUrl());
         }
 
         [Command("browser")]
-        public async Task GetFoldingBrowserUrl()
+        [Alias("Download the folding browser to assist your journey into folding")]
+        public Task GetFoldingBrowserUrl()
         {
-            await ReplyAsync(service.GetFoldingBrowserUrl());
+            return ReplyAsync(service.GetFoldingBrowserUrl());
         }
 
         [Command("market")]
-        public async Task GetMarketValue()
+        [Alias("Get the current market value of our token")]
+        public Task GetMarketValue()
         {
-            await ReplyAsync(service.GetMarketValue());
+            return ReplyAsync(service.GetMarketValue());
         }
 
         [Command("distribution")]
-        public async Task GetNextDistributionDate()
+        [Alias("Get the date of our next distribution")]
+        public Task GetNextDistributionDate()
         {
-            await ReplyAsync(service.GetNextDistributionDate());
+            return ReplyAsync(service.GetNextDistributionDate());
         }
 
         [Command("user")]
-        public async Task GetUserStats()
+        [Alias("Get user stats")]
+        public Task GetUserStats()
         {
-            await ReplyAsync(service.GetUserStats());
+            return ReplyAsync(service.GetUserStats());
         }
 
         [Command("nacl")]
-        public async Task GetWebClientUrl()
+        [Alias("Use the web client to start folding today")]
+        public Task GetWebClientUrl()
         {
-            await ReplyAsync(service.GetWebClientUrl());
+            return ReplyAsync(service.GetWebClientUrl());
         }
 
         [Command("help")]
+        [Alias("Show the list of available commands")]
         public async Task Help()
         {
             await ReplyAsync(service.Help());
         }
 
         [Command("lookup")]
-        public async Task LookupUser()
+        [Alias("Search for a user")]
+        public Task LookupUser()
         {
-            await ReplyAsync(service.LookupUser());
+            return ReplyAsync(service.LookupUser());
         }
 
         private Task ReplyAsync(string message, [CallerMemberName] string methodName = "")

@@ -1,6 +1,7 @@
 ﻿namespace DiscordBot.Console
 {
     using DiscordBot.Core;
+    using DiscordBot.Core.Modules;
 
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
@@ -18,7 +19,7 @@
             {
                 services.AddLogging().AddHostedService<DiscordBot>();
 
-                services.AddTransient<ICommandService, CommandProvider>();
+                services.AddSingleton<ICommandService, CommandProvider>();
                 services.AddTransient<IDiscordBotModuleService, DiscordBotModuleProvider>();
             });
         }

@@ -35,8 +35,8 @@
             {
                 await commandService.AddModulesAsync();
                 client = new DiscordSocketClient();
-
-                await client.LoginAsync(TokenType.Bot, GetToken());
+                string token = GetToken();
+                await client.LoginAsync(TokenType.Bot, token);
                 await client.StartAsync();
 
                 client.MessageReceived += HandleMessageReceived;

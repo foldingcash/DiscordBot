@@ -1,5 +1,6 @@
 ﻿namespace DiscordBot.Core
 {
+    using System.Collections.Generic;
     using System.Threading.Tasks;
 
     using Discord.Commands;
@@ -9,5 +10,7 @@
         Task AddModulesAsync();
 
         Task<IResult> ExecuteAsync(SocketCommandContext commandContext, int argumentPosition);
+
+        IEnumerable<CommandInfo> GetCommands();
     }
 }

@@ -1,6 +1,8 @@
 ﻿namespace DiscordBot.Core
 {
     using System;
+    using System.Collections.Generic;
+    using System.Linq;
     using System.Threading.Tasks;
 
     using Discord.Commands;
@@ -40,14 +42,19 @@
             return await innerService.ExecuteAsync(commandContext, argumentPosition, services);
         }
 
+        public IEnumerable<CommandInfo> GetCommands()
+        {
+            return innerService.Commands.Where(command => command.Name != "good bot");
+        }
+
         private string GetDevChannel()
         {
-            return configuration.GetSection("AppSettings")["DevChannel"];
+            return configuration.GetAppSetting("DevChannel");
         }
 
         private bool IsDevelopmentEnvironment()
         {
-            bool parsed = bool.TryParse(configuration.GetSection("AppSettings")["DevMode"], out bool devMode);
+            bool parsed = bool.TryParse(configuration.GetAppSetting("DevMode"), out bool devMode);
             return parsed && devMode;
         }
     }
