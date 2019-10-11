@@ -1,4 +1,4 @@
-﻿namespace DiscordBot.Core
+﻿namespace DiscordBot.Interfaces
 {
     using System.Collections.Generic;
     using System.Threading.Tasks;

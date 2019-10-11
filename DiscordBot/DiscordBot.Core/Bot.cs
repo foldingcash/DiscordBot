@@ -8,21 +8,23 @@
     using Discord.Commands;
     using Discord.WebSocket;
 
+    using DiscordBot.Interfaces;
+
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
 
-    public class DiscordBot : IHostedService
+    public class Bot : IHostedService
     {
         private readonly ICommandService commandService;
 
         private readonly IConfiguration configuration;
 
-        private readonly ILogger<DiscordBot> logger;
+        private readonly ILogger<Bot> logger;
 
         private DiscordSocketClient client;
 
-        public DiscordBot(IConfiguration configuration, ICommandService commandService, ILogger<DiscordBot> logger)
+        public Bot(IConfiguration configuration, ICommandService commandService, ILogger<Bot> logger)
         {
             this.configuration = configuration;
             this.commandService = commandService;

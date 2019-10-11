@@ -5,15 +5,17 @@
 
     using Discord.Commands;
 
+    using DiscordBot.Interfaces;
+
     using Microsoft.Extensions.Configuration;
 
-    public class DiscordBotModuleProvider : IDiscordBotModuleService
+    public class FoldingBotModuleProvider : IDiscordBotModuleService
     {
         private readonly ICommandService commandService;
 
         private readonly IConfiguration configuration;
 
-        public DiscordBotModuleProvider(IConfiguration configuration, ICommandService commandService)
+        public FoldingBotModuleProvider(IConfiguration configuration, ICommandService commandService)
         {
             this.configuration = configuration;
             this.commandService = commandService;

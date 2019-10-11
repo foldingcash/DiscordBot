@@ -6,30 +6,32 @@
     using Discord;
     using Discord.Commands;
 
+    using DiscordBot.Interfaces;
+
     using Microsoft.Extensions.Logging;
 
-    public class DiscordBotModule : ModuleBase<SocketCommandContext>
+    public class FoldingBotModule : ModuleBase<SocketCommandContext>
     {
-        private readonly ILogger<DiscordBotModule> logger;
+        private readonly ILogger<FoldingBotModule> logger;
 
         private readonly IDiscordBotModuleService service;
 
-        public DiscordBotModule(IDiscordBotModuleService service, ILogger<DiscordBotModule> logger)
+        public FoldingBotModule(IDiscordBotModuleService service, ILogger<FoldingBotModule> logger)
         {
             this.service = service;
             this.logger = logger;
-        }
-
-        [Command("good bot")]
-        public Task AcknowledgeGoodBot()
-        {
-            return ReplyAsync(":D");
         }
 
         [Command("bad bot")]
         public Task AcknowledgeBadBot()
         {
             return ReplyAsync("D:");
+        }
+
+        [Command("good bot")]
+        public Task AcknowledgeGoodBot()
+        {
+            return ReplyAsync(":D");
         }
 
         [Command("fah")]

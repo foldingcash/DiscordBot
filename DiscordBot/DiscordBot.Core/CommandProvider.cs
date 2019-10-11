@@ -7,7 +7,8 @@
 
     using Discord.Commands;
 
-    using global::DiscordBot.Core.Modules;
+    using DiscordBot.Core.Modules;
+    using DiscordBot.Interfaces;
 
     using Microsoft.Extensions.Configuration;
 
@@ -29,17 +30,17 @@
 
         public Task AddModulesAsync()
         {
-            return innerService.AddModuleAsync<DiscordBotModule>(services);
+            return innerService.AddModuleAsync<FoldingBotModule>(services);
         }
 
-        public async Task<IResult> ExecuteAsync(SocketCommandContext commandContext, int argumentPosition)
+        public Task<IResult> ExecuteAsync(SocketCommandContext commandContext, int argumentPosition)
         {
             if (IsDevelopmentEnvironment() && commandContext.Channel.Name != GetDevChannel())
             {
-                return ExecuteResult.FromSuccess();
+                return Task.Run(() => ExecuteResult.FromSuccess() as IResult);
             }
 
-            return await innerService.ExecuteAsync(commandContext, argumentPosition, services);
+            return innerService.ExecuteAsync(commandContext, argumentPosition, services);
         }
 
         public IEnumerable<CommandInfo> GetCommands()
