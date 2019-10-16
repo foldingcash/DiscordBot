@@ -1,5 +1,6 @@
 ﻿namespace DiscordBot.Core.Modules
 {
+    using System;
     using System.Collections.Generic;
     using System.Text;
 
@@ -38,7 +39,24 @@
 
         public string GetNextDistributionDate()
         {
-            return "return the next distribution date";
+            DateTime now = DateTime.Now;
+            DateTime distributionDate = GetDistributionDate(now.Year, now.Month);
+            DateTime endDistributionDate = distributionDate.AddDays(1).AddMinutes(-1);
+
+            if (now < distributionDate)
+            {
+                // do nothing
+            }
+            else if (now >= distributionDate && now <= endDistributionDate)
+            {
+                return "The distribution is today!";
+            }
+            else
+            {
+                distributionDate = GetDistributionDate(now.Year + (now.Month + 1) / 13, (now.Month + 1) % 12);
+            }
+
+            return $"The next distribution is {distributionDate.ToShortDateString()}";
         }
 
         public string GetUserStats()
@@ -69,6 +87,18 @@
         public string LookupUser()
         {
             return "allow the user to look themselves up";
+        }
+
+        private DateTime GetDistributionDate(int year, int month)
+        {
+            var distributionDate = new DateTime(year, month, 1);
+
+            while (distributionDate.DayOfWeek != DayOfWeek.Saturday)
+            {
+                distributionDate = distributionDate.AddDays(1);
+            }
+
+            return distributionDate;
         }
     }
 }
