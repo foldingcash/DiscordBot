@@ -2,7 +2,13 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
+    using System.Net.Http;
+    using System.Runtime.Serialization;
+    using System.Runtime.Serialization.Json;
     using System.Text;
+    using System.Threading.Tasks;
 
     using Discord.Commands;
 
@@ -53,7 +59,8 @@
             }
             else
             {
-                distributionDate = GetDistributionDate(now.Year + (now.Month + 1) / 13, (now.Month + 1) % 12);
+                DateTime nextMonth = now.AddMonths(1);
+                distributionDate = GetDistributionDate(nextMonth.Year, nextMonth.Month);
             }
 
             return $"The next distribution is {distributionDate.ToShortDateString()}";
@@ -84,9 +91,37 @@
             return builder.ToString();
         }
 
-        public string LookupUser()
+        public async Task<string> LookupUser(string username)
         {
-            return "allow the user to look themselves up";
+            var foldingApiUri = new Uri(configuration.GetAppSetting("FoldingApiUri"), UriKind.Absolute);
+            var getMemberStatsPath = new Uri("/v1/GetMembers", UriKind.Relative);
+            var requestUri = new Uri(foldingApiUri, getMemberStatsPath);
+
+            var serializer = new DataContractJsonSerializer(typeof (MemberResponse));
+
+            using (var client = new HttpClient())
+            {
+                HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
+
+                if (!httpResponse.IsSuccessStatusCode)
+                {
+                    return "The api is down :( try again later";
+                }
+
+                Stream streamReader = await httpResponse.Content.ReadAsStreamAsync();
+
+                var response = serializer.ReadObject(streamReader) as MemberResponse;
+
+                if (response is null || !response.Success)
+                {
+                    return "The api is down :( try again later";
+                }
+
+                IEnumerable<Member> matchingMembers =
+                    response.Members.Where(member => member.UserName.StartsWith(username));
+
+                return $"found the following matches: {string.Join(", ", matchingMembers)}";
+            }
         }
 
         private DateTime GetDistributionDate(int year, int month)
@@ -99,6 +134,54 @@
             }
 
             return distributionDate;
+        }
+
+        [DataContract]
+        private class ApiError
+        {
+            [DataMember]
+            public string ErrorCode { get; set; }
+
+            [DataMember]
+            public string ErrorMessage { get; set; }
+        }
+
+        [DataContract]
+        private class Member
+        {
+            [DataMember]
+            public string BitcoinAddress { get; set; }
+
+            [DataMember]
+            public string FriendlyName { get; set; }
+
+            [DataMember]
+            public long TeamNumber { get; set; }
+
+            [DataMember]
+            public string UserName { get; set; }
+        }
+
+        [DataContract]
+        private class MemberResponse
+        {
+            [DataMember]
+            public int? ErrorCount { get; set; }
+
+            [DataMember]
+            public IList<ApiError> Errors { get; set; }
+
+            [DataMember]
+            public string FirstErrorCode { get; set; }
+
+            [DataMember]
+            public int? MemberCount { get; set; }
+
+            [DataMember]
+            public IList<Member> Members { get; set; }
+
+            [DataMember]
+            public bool Success { get; set; }
         }
     }
 }

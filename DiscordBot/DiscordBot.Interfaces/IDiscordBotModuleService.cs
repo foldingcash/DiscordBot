@@ -1,5 +1,7 @@
 ﻿namespace DiscordBot.Interfaces
 {
+    using System.Threading.Tasks;
+
     public interface IDiscordBotModuleService
     {
         string GetFoldingAtHomeUrl();
@@ -16,6 +18,6 @@
 
         string Help();
 
-        string LookupUser();
+        Task<string> LookupUser(string username);
     }
 }

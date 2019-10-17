@@ -85,9 +85,9 @@
 
         [Command("lookup")]
         [Summary("Search for a user")]
-        public Task LookupUser()
+        public async Task LookupUser(string username)
         {
-            return ReplyAsync(service.LookupUser());
+            await ReplyAsync(await service.LookupUser(username));
         }
 
         private Task ReplyAsync(string message, [CallerMemberName] string methodName = "")
