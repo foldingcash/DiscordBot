@@ -11,6 +11,7 @@
     using DiscordBot.Interfaces;
 
     using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.Logging;
 
     public class CommandProvider : ICommandService
     {
@@ -18,12 +19,15 @@
 
         private readonly CommandService innerService;
 
+        private readonly ILogger<CommandProvider> logger;
+
         private readonly IServiceProvider services;
 
-        public CommandProvider(IServiceProvider services, IConfiguration configuration)
+        public CommandProvider(ILogger<CommandProvider> logger, IServiceProvider services, IConfiguration configuration)
         {
             innerService = new CommandService(new CommandServiceConfig());
 
+            this.logger = logger;
             this.services = services;
             this.configuration = configuration;
         }
@@ -33,19 +37,40 @@
             return innerService.AddModuleAsync<FoldingBotModule>(services);
         }
 
-        public Task<IResult> ExecuteAsync(SocketCommandContext commandContext, int argumentPosition)
+        public async Task<IResult> ExecuteAsync(SocketCommandContext commandContext, int argumentPosition)
         {
             if (IsDevelopmentEnvironment() && commandContext.Channel.Name != GetDevChannel())
             {
-                return Task.Run(() => ExecuteResult.FromSuccess() as IResult);
+                return ExecuteResult.FromSuccess();
             }
 
-            return innerService.ExecuteAsync(commandContext, argumentPosition, services);
+            SearchResult searchResult = innerService.Search(commandContext, argumentPosition);
+
+            bool matchIsDevCommand = searchResult.Commands.Any(command =>
+                command.Command.Attributes.Any(attribute =>
+                    attribute is DevelopmentAttribute));
+
+            if (!IsDevelopmentEnvironment() && matchIsDevCommand)
+            {
+                return ExecuteResult.FromSuccess();
+            }
+
+            return await innerService.ExecuteAsync(commandContext, argumentPosition, services);
         }
 
         public IEnumerable<CommandInfo> GetCommands()
         {
-            return innerService.Commands.Where(command => command.Name != "good bot" && command.Name != "bad bot");
+            bool isDevMode = IsDevelopmentEnvironment();
+
+            IEnumerable<CommandInfo> removedHiddenCommands =
+                innerService.Commands.Where(command =>
+                    command.Attributes.All(attribute => !(attribute is HiddenAttribute)));
+
+            IEnumerable<CommandInfo> removedDevCommands =
+                isDevMode ? removedHiddenCommands : removedHiddenCommands.Where(command =>
+                    command.Attributes.All(attribute => !(attribute is DevelopmentAttribute)));
+
+            return removedDevCommands;
         }
 
         private string GetDevChannel()
@@ -55,7 +80,9 @@
 
         private bool IsDevelopmentEnvironment()
         {
-            bool parsed = bool.TryParse(configuration.GetAppSetting("DevMode"), out bool devMode);
+            string rawValue = configuration.GetAppSetting("DevMode");
+            logger.LogDebug("Attempting to parse DevMode configuration value: {value}", rawValue);
+            bool parsed = bool.TryParse(rawValue, out bool devMode);
             return parsed && devMode;
         }
     }

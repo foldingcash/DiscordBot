@@ -23,12 +23,14 @@
         }
 
         [Command("bad bot")]
+        [Hidden]
         public Task AcknowledgeBadBot()
         {
             return ReplyAsync("D:");
         }
 
         [Command("good bot")]
+        [Hidden]
         public Task AcknowledgeGoodBot()
         {
             return ReplyAsync(":D");
@@ -50,6 +52,7 @@
 
         [Command("market")]
         [Summary("Get the current market value of our token")]
+        [Development]
         public Task GetMarketValue()
         {
             return ReplyAsync(service.GetMarketValue());
@@ -57,6 +60,7 @@
 
         [Command("distribution")]
         [Summary("Get the date of our next distribution")]
+        [Development]
         public Task GetNextDistributionDate()
         {
             return ReplyAsync(service.GetNextDistributionDate());
@@ -64,6 +68,7 @@
 
         [Command("user")]
         [Summary("Get user stats")]
+        [Development]
         public Task GetUserStats()
         {
             return ReplyAsync(service.GetUserStats());
@@ -85,8 +90,13 @@
 
         [Command("lookup")]
         [Summary("Search for a user")]
+        [Development]
         public async Task LookupUser(string username)
         {
+            //var hourglass = new Emoji("\u23F3");
+            //await Context.Message.AddReactionAsync(hourglass);
+            //await Context.Message.RemoveReactionAsync(hourglass, Context.User, RequestOptions.Default);
+
             await ReplyAsync(await service.LookupUser(username));
         }
 

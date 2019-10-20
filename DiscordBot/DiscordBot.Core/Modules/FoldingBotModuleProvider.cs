@@ -15,6 +15,7 @@
     using DiscordBot.Interfaces;
 
     using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.Logging;
 
     public class FoldingBotModuleProvider : IDiscordBotModuleService
     {
@@ -22,8 +23,12 @@
 
         private readonly IConfiguration configuration;
 
-        public FoldingBotModuleProvider(IConfiguration configuration, ICommandService commandService)
+        private readonly ILogger<FoldingBotModuleProvider> logger;
+
+        public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger, IConfiguration configuration,
+                                        ICommandService commandService)
         {
+            this.logger = logger;
             this.configuration = configuration;
             this.commandService = commandService;
         }
@@ -101,7 +106,11 @@
 
             using (var client = new HttpClient())
             {
+                logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
+
                 HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
+
+                logger.LogInformation("Finished GET from URI");
 
                 if (!httpResponse.IsSuccessStatusCode)
                 {

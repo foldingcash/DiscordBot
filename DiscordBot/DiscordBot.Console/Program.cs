@@ -6,6 +6,7 @@
 
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
+    using Microsoft.Extensions.Logging;
 
     public class Program
     {
@@ -18,7 +19,7 @@
         {
             return Host.CreateDefaultBuilder(args).ConfigureServices(services =>
             {
-                services.AddLogging().AddHostedService<Bot>();
+                services.AddLogging(options => { options.SetMinimumLevel(LogLevel.Trace); }).AddHostedService<Bot>();
 
                 services.AddSingleton<ICommandService, CommandProvider>();
                 services.AddTransient<IDiscordBotModuleService, FoldingBotModuleProvider>();
