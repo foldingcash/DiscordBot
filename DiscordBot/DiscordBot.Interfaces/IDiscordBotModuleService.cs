@@ -18,6 +18,6 @@
 
         string Help();
 
-        Task<string> LookupUser(string username);
+        Task<string> LookupUser(string searchCriteria);
     }
 }

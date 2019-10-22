@@ -12,6 +12,8 @@
 
     public class FoldingBotModule : ModuleBase<SocketCommandContext>
     {
+        private readonly Emoji hourglass = new Emoji("\u23F3");
+
         private readonly ILogger<FoldingBotModule> logger;
 
         private readonly IDiscordBotModuleService service;
@@ -91,21 +93,22 @@
         [Command("lookup")]
         [Summary("Search for a user")]
         [Development]
-        public async Task LookupUser(string username)
+        public async Task LookupUser(string searchCriteria)
         {
-            //var hourglass = new Emoji("\u23F3");
-            //await Context.Message.AddReactionAsync(hourglass);
-            //await Context.Message.RemoveReactionAsync(hourglass, Context.User, RequestOptions.Default);
-
-            await ReplyAsync(await service.LookupUser(username));
+            await ReplyAsync(await service.LookupUser(searchCriteria));
         }
 
-        private Task ReplyAsync(string message, [CallerMemberName] string methodName = "")
+        private async Task ReplyAsync(string message, [CallerMemberName] string methodName = "")
         {
             logger.LogInformation("Method Invoked: {methodName}", methodName);
-            Task<IUserMessage> task = base.ReplyAsync(message);
+
+            await Context.Message.AddReactionAsync(hourglass);
+
+            await base.ReplyAsync(message);
+
+            await Context.Message.RemoveReactionAsync(hourglass, Context.Client.CurrentUser, RequestOptions.Default);
+
             logger.LogInformation("Method Finished: {methodName}", methodName);
-            return task;
         }
     }
 }

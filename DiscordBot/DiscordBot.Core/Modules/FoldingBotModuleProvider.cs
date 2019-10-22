@@ -10,6 +10,8 @@
     using System.Text;
     using System.Threading.Tasks;
 
+    using Castle.Core.Internal;
+
     using Discord.Commands;
 
     using DiscordBot.Interfaces;
@@ -96,13 +98,13 @@
             return builder.ToString();
         }
 
-        public async Task<string> LookupUser(string username)
+        public async Task<string> LookupUser(string searchCriteria)
         {
             var foldingApiUri = new Uri(configuration.GetAppSetting("FoldingApiUri"), UriKind.Absolute);
             var getMemberStatsPath = new Uri("/v1/GetMembers", UriKind.Relative);
             var requestUri = new Uri(foldingApiUri, getMemberStatsPath);
 
-            var serializer = new DataContractJsonSerializer(typeof (MemberResponse));
+            var serializer = new DataContractJsonSerializer(typeof (MembersResponse));
 
             using (var client = new HttpClient())
             {
@@ -117,19 +119,45 @@
                     return "The api is down :( try again later";
                 }
 
-                Stream streamReader = await httpResponse.Content.ReadAsStreamAsync();
+                string contentResponse = await httpResponse.Content.ReadAsStringAsync();
 
-                var response = serializer.ReadObject(streamReader) as MemberResponse;
+                logger.LogDebug("contentResponse: {contentResponse}", contentResponse);
 
-                if (response is null || !response.Success)
+                using (var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(contentResponse)))
                 {
-                    return "The api is down :( try again later";
+                    var membersResponse = serializer.ReadObject(streamReader) as MembersResponse;
+
+                    if (membersResponse is null || !membersResponse.Success)
+                    {
+                        return "The api is down :( try again later";
+                    }
+
+                    IEnumerable<Member> matchingMembers = membersResponse.Members.Where(member =>
+                        member.UserName.StartsWith(searchCriteria,
+                            StringComparison
+                                .CurrentCultureIgnoreCase)
+                        || member.UserName.EndsWith(
+                            searchCriteria,
+                            StringComparison
+                                .CurrentCultureIgnoreCase));
+
+                    if (matchingMembers.IsNullOrEmpty())
+                    {
+                        return
+                            "No matches found. Ensure you are searching the start or ending of your username and try again.";
+                    }
+
+                    string response = $"Found the following matches:{Environment.NewLine}"
+                                      + $"\t{string.Join($",{Environment.NewLine}\t", matchingMembers.Select(member => member.UserName).Distinct())}";
+
+                    if (response.Length > 2000)
+                    {
+                        response = response.Substring(0, 2000 - 3);
+                        response += "...";
+                    }
+
+                    return response;
                 }
-
-                IEnumerable<Member> matchingMembers =
-                    response.Members.Where(member => member.UserName.StartsWith(username));
-
-                return $"found the following matches: {string.Join(", ", matchingMembers)}";
             }
         }
 
@@ -148,48 +176,48 @@
         [DataContract]
         private class ApiError
         {
-            [DataMember]
+            [DataMember(Name = "errorCode")]
             public string ErrorCode { get; set; }
 
-            [DataMember]
+            [DataMember(Name = "errorMessage")]
             public string ErrorMessage { get; set; }
         }
 
         [DataContract]
         private class Member
         {
-            [DataMember]
+            [DataMember(Name = "bitcoinAddress")]
             public string BitcoinAddress { get; set; }
 
-            [DataMember]
+            [DataMember(Name = "friendlyName")]
             public string FriendlyName { get; set; }
 
-            [DataMember]
+            [DataMember(Name = "teamNumber")]
             public long TeamNumber { get; set; }
 
-            [DataMember]
+            [DataMember(Name = "userName")]
             public string UserName { get; set; }
         }
 
         [DataContract]
-        private class MemberResponse
+        private class MembersResponse
         {
-            [DataMember]
+            [DataMember(Name = "errorCount")]
             public int? ErrorCount { get; set; }
 
-            [DataMember]
+            [DataMember(Name = "errors")]
             public IList<ApiError> Errors { get; set; }
 
-            [DataMember]
+            [DataMember(Name = "firstErrorCode")]
             public string FirstErrorCode { get; set; }
 
-            [DataMember]
+            [DataMember(Name = "memberCount")]
             public int? MemberCount { get; set; }
 
-            [DataMember]
+            [DataMember(Name = "members")]
             public IList<Member> Members { get; set; }
 
-            [DataMember]
+            [DataMember(Name = "success")]
             public bool Success { get; set; }
         }
     }
