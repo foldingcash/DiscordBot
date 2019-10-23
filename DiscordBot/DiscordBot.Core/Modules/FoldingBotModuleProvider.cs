@@ -45,9 +45,55 @@
             return $"Visit {configuration.GetAppSetting("FoldingBrowserUrl")} to download the folding browser";
         }
 
-        public string GetMarketValue()
+        public async Task<string> GetMarketValue()
         {
-            return "show the current market value of the coin";
+            var coinMarketCapUri = new Uri(configuration.GetAppSetting("CoinMarketCap.Uri"), UriKind.Absolute);
+            var getFoldingCoinValuePath = new Uri("/v1/ticker/foldingcoin?convert=USD", UriKind.Relative);
+            var requestUri = new Uri(coinMarketCapUri, getFoldingCoinValuePath);
+
+            var serializer = new DataContractJsonSerializer(typeof (CoinMarketCapMarketValueResponse[]));
+
+            using (var client = new HttpClient())
+            {
+                logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
+
+                HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
+
+                logger.LogInformation("Finished GET from URI");
+
+                if (!httpResponse.IsSuccessStatusCode)
+                {
+                    return "The api is down :( try again later";
+                }
+
+                string contentResponse = await httpResponse.Content.ReadAsStringAsync();
+
+                logger.LogDebug("contentResponse: {contentResponse}", contentResponse);
+
+                using (var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(contentResponse)))
+                {
+                    var marketValueResponses =
+                        serializer.ReadObject(streamReader) as CoinMarketCapMarketValueResponse[];
+
+                    if (marketValueResponses is null || marketValueResponses.Length == 0)
+                    {
+                        return "The api is down :( try again later";
+                    }
+
+                    CoinMarketCapMarketValueResponse marketValueResponse = marketValueResponses.First();
+
+                    var stringBuilder = new StringBuilder();
+
+                    stringBuilder.AppendLine($"Name: {marketValueResponse.Name}");
+                    stringBuilder.AppendLine($"Symbol: {marketValueResponse.Symbol}");
+                    stringBuilder.AppendLine($"Price in $: {marketValueResponse.PriceInUsd}");
+                    stringBuilder.AppendLine($"Price in BTC: {marketValueResponse.PriceInBtc}");
+                    stringBuilder.AppendLine(
+                        $"Last Updated: {DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(marketValueResponse.LastUpdated))}");
+
+                    return stringBuilder.ToString();
+                }
+            }
         }
 
         public string GetNextDistributionDate()

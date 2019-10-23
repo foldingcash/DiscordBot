@@ -8,7 +8,7 @@
 
         string GetFoldingBrowserUrl();
 
-        string GetMarketValue();
+        Task<string> GetMarketValue();
 
         string GetNextDistributionDate();
 
