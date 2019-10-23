@@ -5,7 +5,6 @@
     using System.IO;
     using System.Linq;
     using System.Net.Http;
-    using System.Runtime.Serialization;
     using System.Runtime.Serialization.Json;
     using System.Text;
     using System.Threading.Tasks;
@@ -14,6 +13,7 @@
 
     using Discord.Commands;
 
+    using DiscordBot.Core.Models;
     using DiscordBot.Interfaces;
 
     using Microsoft.Extensions.Configuration;
@@ -171,54 +171,6 @@
             }
 
             return distributionDate;
-        }
-
-        [DataContract]
-        private class ApiError
-        {
-            [DataMember(Name = "errorCode")]
-            public string ErrorCode { get; set; }
-
-            [DataMember(Name = "errorMessage")]
-            public string ErrorMessage { get; set; }
-        }
-
-        [DataContract]
-        private class Member
-        {
-            [DataMember(Name = "bitcoinAddress")]
-            public string BitcoinAddress { get; set; }
-
-            [DataMember(Name = "friendlyName")]
-            public string FriendlyName { get; set; }
-
-            [DataMember(Name = "teamNumber")]
-            public long TeamNumber { get; set; }
-
-            [DataMember(Name = "userName")]
-            public string UserName { get; set; }
-        }
-
-        [DataContract]
-        private class MembersResponse
-        {
-            [DataMember(Name = "errorCount")]
-            public int? ErrorCount { get; set; }
-
-            [DataMember(Name = "errors")]
-            public IList<ApiError> Errors { get; set; }
-
-            [DataMember(Name = "firstErrorCode")]
-            public string FirstErrorCode { get; set; }
-
-            [DataMember(Name = "memberCount")]
-            public int? MemberCount { get; set; }
-
-            [DataMember(Name = "members")]
-            public IList<Member> Members { get; set; }
-
-            [DataMember(Name = "success")]
-            public bool Success { get; set; }
         }
     }
 }
