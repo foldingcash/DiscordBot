@@ -1,0 +1,20 @@
+﻿namespace DiscordBot.Core.Models
+{
+    using System.Runtime.Serialization;
+
+    [DataContract]
+    internal class DistroUser
+    {
+        [DataMember(Name = "amount")]
+        public decimal Amount { get; set; }
+
+        [DataMember(Name = "bitcoinAddress")]
+        public string BitcoinAddress { get; set; }
+
+        [DataMember(Name = "pointsGained")]
+        public long PointsGained { get; set; }
+
+        [DataMember(Name = "workUnitsGained")]
+        public long WorkUnitsGained { get; set; }
+    }
+}

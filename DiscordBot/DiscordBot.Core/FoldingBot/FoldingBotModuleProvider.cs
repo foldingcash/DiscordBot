@@ -121,13 +121,13 @@
             return $"The next distribution is {distributionDate.ToShortDateString()}";
         }
 
-        public async Task<string> GetUserStats()
+        public async Task<string> GetUserStats(string bitcoinAddress)
         {
             var foldingApiUri = new Uri(configuration.GetAppSetting("FoldingApiUri"), UriKind.Absolute);
-            var getDistroPath = new Uri("/v1/GetDistro", UriKind.Relative);
+            var getDistroPath = new Uri("/v1/GetDistro/Next", UriKind.Relative);
             var requestUri = new Uri(foldingApiUri, getDistroPath);
 
-            var serializer = new DataContractJsonSerializer(typeof (MembersResponse));
+            var serializer = new DataContractJsonSerializer(typeof (DistroResponse));
 
             using (var client = new HttpClient())
             {
@@ -150,24 +150,28 @@
 
                 using (var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent)))
                 {
-                    var marketValueResponses =
-                        serializer.ReadObject(streamReader) as CoinMarketCapMarketValueResponse[];
+                    var distroResponse = serializer.ReadObject(streamReader) as DistroResponse;
 
-                    if (marketValueResponses is null || marketValueResponses.Length == 0)
+                    if (distroResponse is null || !distroResponse.Success)
                     {
                         return "The api is down :( try again later";
                     }
 
-                    CoinMarketCapMarketValueResponse marketValueResponse = marketValueResponses.First();
+                    DistroUser distroUser =
+                        distroResponse.Distro.FirstOrDefault(user => user.BitcoinAddress == bitcoinAddress);
+
+                    if (distroUser is null)
+                    {
+                        return
+                            "We were unable to find your bitcoin address. Ensure the address is correct and try again.";
+                    }
 
                     var stringBuilder = new StringBuilder();
 
-                    stringBuilder.AppendLine("Source: coinmarketcap.com");
-                    stringBuilder.AppendLine($"\tName: {marketValueResponse.Name}");
-                    stringBuilder.AppendLine($"\tSymbol: {marketValueResponse.Symbol}");
-                    stringBuilder.AppendLine($"\tPrice in $: {marketValueResponse.PriceInUsd}");
-                    stringBuilder.AppendLine($"\tPrice in BTC: {marketValueResponse.PriceInBtc}");
-                    stringBuilder.AppendLine($"\tLast Updated: {marketValueResponse.LastUpdatedDateTime}");
+                    stringBuilder.AppendLine($"Results for: {distroUser.BitcoinAddress}");
+                    stringBuilder.AppendLine($"\tPoints gained: {distroUser.PointsGained}");
+                    stringBuilder.AppendLine($"\tWork units gained: {distroUser.WorkUnitsGained}");
+                    stringBuilder.AppendLine($"\tReceiving amount: {distroUser.Amount}");
 
                     return stringBuilder.ToString();
                 }

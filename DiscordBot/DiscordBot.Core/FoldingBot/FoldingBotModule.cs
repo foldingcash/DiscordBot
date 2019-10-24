@@ -70,9 +70,9 @@
         [Command("user")]
         [Summary("Get user stats")]
         [Development]
-        public async Task GetUserStats()
+        public async Task GetUserStats(string bitcoinAddress)
         {
-            await ReplyAsync(await service.GetUserStats());
+            await ReplyAsync(await service.GetUserStats(bitcoinAddress));
         }
 
         [Command("nacl")]

@@ -12,7 +12,7 @@
 
         string GetNextDistributionDate();
 
-        Task<string> GetUserStats();
+        Task<string> GetUserStats(string bitcoinAddress);
 
         string GetWebClientUrl();
 
