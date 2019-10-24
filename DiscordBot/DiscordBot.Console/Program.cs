@@ -22,8 +22,8 @@
 
                 services.AddHostedService<Bot>();
 
-                services.AddTransient<ICommandService, CommandProvider>();
-                services.AddTransient<IDiscordBotModuleService, FoldingBotModuleProvider>();
+                services.AddSingleton<ICommandService, CommandProvider>();
+                services.AddSingleton<IDiscordBotModuleService, FoldingBotModuleProvider>();
             });
         }
     }
