@@ -12,7 +12,7 @@
 
         string GetNextDistributionDate();
 
-        string GetUserStats();
+        Task<string> GetUserStats();
 
         string GetWebClientUrl();
 

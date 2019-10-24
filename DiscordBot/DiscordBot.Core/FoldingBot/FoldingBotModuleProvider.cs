@@ -1,4 +1,4 @@
-﻿namespace DiscordBot.Core.Modules
+﻿namespace DiscordBot.Core.FoldingBot
 {
     using System;
     using System.Collections.Generic;
@@ -61,16 +61,18 @@
 
                 logger.LogInformation("Finished GET from URI");
 
+                string responseContent = await httpResponse.Content.ReadAsStringAsync();
+
                 if (!httpResponse.IsSuccessStatusCode)
                 {
+                    logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
+                        httpResponse.StatusCode, responseContent);
                     return "The api is down :( try again later";
                 }
 
-                string contentResponse = await httpResponse.Content.ReadAsStringAsync();
+                logger.LogTrace("responseContent: {responseContent}", responseContent);
 
-                logger.LogDebug("contentResponse: {contentResponse}", contentResponse);
-
-                using (var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(contentResponse)))
+                using (var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent)))
                 {
                     var marketValueResponses =
                         serializer.ReadObject(streamReader) as CoinMarketCapMarketValueResponse[];
@@ -119,9 +121,57 @@
             return $"The next distribution is {distributionDate.ToShortDateString()}";
         }
 
-        public string GetUserStats()
+        public async Task<string> GetUserStats()
         {
-            return "show the user their stats";
+            var foldingApiUri = new Uri(configuration.GetAppSetting("FoldingApiUri"), UriKind.Absolute);
+            var getDistroPath = new Uri("/v1/GetDistro", UriKind.Relative);
+            var requestUri = new Uri(foldingApiUri, getDistroPath);
+
+            var serializer = new DataContractJsonSerializer(typeof (MembersResponse));
+
+            using (var client = new HttpClient())
+            {
+                logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
+
+                HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
+
+                logger.LogInformation("Finished GET from URI");
+
+                string responseContent = await httpResponse.Content.ReadAsStringAsync();
+
+                if (!httpResponse.IsSuccessStatusCode)
+                {
+                    logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
+                        httpResponse.StatusCode, responseContent);
+                    return "The api is down :( try again later";
+                }
+
+                logger.LogTrace("responseContent: {responseContent}", responseContent);
+
+                using (var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent)))
+                {
+                    var marketValueResponses =
+                        serializer.ReadObject(streamReader) as CoinMarketCapMarketValueResponse[];
+
+                    if (marketValueResponses is null || marketValueResponses.Length == 0)
+                    {
+                        return "The api is down :( try again later";
+                    }
+
+                    CoinMarketCapMarketValueResponse marketValueResponse = marketValueResponses.First();
+
+                    var stringBuilder = new StringBuilder();
+
+                    stringBuilder.AppendLine("Source: coinmarketcap.com");
+                    stringBuilder.AppendLine($"\tName: {marketValueResponse.Name}");
+                    stringBuilder.AppendLine($"\tSymbol: {marketValueResponse.Symbol}");
+                    stringBuilder.AppendLine($"\tPrice in $: {marketValueResponse.PriceInUsd}");
+                    stringBuilder.AppendLine($"\tPrice in BTC: {marketValueResponse.PriceInBtc}");
+                    stringBuilder.AppendLine($"\tLast Updated: {marketValueResponse.LastUpdatedDateTime}");
+
+                    return stringBuilder.ToString();
+                }
+            }
         }
 
         public string GetWebClientUrl()
@@ -160,16 +210,18 @@
 
                 logger.LogInformation("Finished GET from URI");
 
+                string responseContent = await httpResponse.Content.ReadAsStringAsync();
+
                 if (!httpResponse.IsSuccessStatusCode)
                 {
+                    logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
+                        httpResponse.StatusCode, responseContent);
                     return "The api is down :( try again later";
                 }
 
-                string contentResponse = await httpResponse.Content.ReadAsStringAsync();
+                logger.LogTrace("responseContent: {responseContent}", responseContent);
 
-                logger.LogDebug("contentResponse: {contentResponse}", contentResponse);
-
-                using (var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(contentResponse)))
+                using (var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent)))
                 {
                     var membersResponse = serializer.ReadObject(streamReader) as MembersResponse;
 

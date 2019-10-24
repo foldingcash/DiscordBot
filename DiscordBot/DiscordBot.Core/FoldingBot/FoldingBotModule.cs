@@ -1,4 +1,4 @@
-﻿namespace DiscordBot.Core.Modules
+﻿namespace DiscordBot.Core.FoldingBot
 {
     using System.Runtime.CompilerServices;
     using System.Threading.Tasks;
@@ -70,9 +70,9 @@
         [Command("user")]
         [Summary("Get user stats")]
         [Development]
-        public Task GetUserStats()
+        public async Task GetUserStats()
         {
-            return ReplyAsync(service.GetUserStats());
+            await ReplyAsync(await service.GetUserStats());
         }
 
         [Command("nacl")]

@@ -1,7 +1,7 @@
 ﻿namespace DiscordBot.Console
 {
     using DiscordBot.Core;
-    using DiscordBot.Core.Modules;
+    using DiscordBot.Core.FoldingBot;
     using DiscordBot.Interfaces;
 
     using Microsoft.Extensions.DependencyInjection;
