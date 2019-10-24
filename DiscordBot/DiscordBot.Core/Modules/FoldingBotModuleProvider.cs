@@ -84,12 +84,12 @@
 
                     var stringBuilder = new StringBuilder();
 
-                    stringBuilder.AppendLine($"Name: {marketValueResponse.Name}");
-                    stringBuilder.AppendLine($"Symbol: {marketValueResponse.Symbol}");
-                    stringBuilder.AppendLine($"Price in $: {marketValueResponse.PriceInUsd}");
-                    stringBuilder.AppendLine($"Price in BTC: {marketValueResponse.PriceInBtc}");
-                    stringBuilder.AppendLine(
-                        $"Last Updated: {DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(marketValueResponse.LastUpdated))}");
+                    stringBuilder.AppendLine("Source: coinmarketcap.com");
+                    stringBuilder.AppendLine($"\tName: {marketValueResponse.Name}");
+                    stringBuilder.AppendLine($"\tSymbol: {marketValueResponse.Symbol}");
+                    stringBuilder.AppendLine($"\tPrice in $: {marketValueResponse.PriceInUsd}");
+                    stringBuilder.AppendLine($"\tPrice in BTC: {marketValueResponse.PriceInBtc}");
+                    stringBuilder.AppendLine($"\tLast Updated: {marketValueResponse.LastUpdatedDateTime}");
 
                     return stringBuilder.ToString();
                 }

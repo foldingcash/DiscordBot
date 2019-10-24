@@ -1,5 +1,6 @@
 ﻿namespace DiscordBot.Core.Models
 {
+    using System;
     using System.Runtime.Serialization;
 
     [DataContract]
@@ -13,6 +14,17 @@
 
         [DataMember(Name = "last_updated")]
         public string LastUpdated { get; set; }
+
+        [IgnoreDataMember]
+        public DateTimeOffset? LastUpdatedDateTime
+        {
+            get
+            {
+                bool parsed = long.TryParse(LastUpdated, out long lastUpdated);
+                DateTimeOffset lastUpdatedDateTime = DateTimeOffset.FromUnixTimeSeconds(lastUpdated);
+                return parsed ? lastUpdatedDateTime as DateTimeOffset? : null;
+            }
+        }
 
         [DataMember(Name = "market_cap_usd")]
         public string MarketCapInUsd { get; set; }
