@@ -192,7 +192,16 @@
 
             foreach (CommandInfo command in commandList)
             {
-                builder.AppendLine($"  {command.Name} - {command.Summary}");
+                var usageAttribute = command.Attributes.FirstOrDefault(attribute => attribute is UsageAttribute) as UsageAttribute;
+
+                if (usageAttribute is default(UsageAttribute))
+                {
+                    builder.AppendLine($"\t{command.Name} - {command.Summary}");
+                }
+                else
+                {
+                    builder.AppendLine($"\t{command.Name} {usageAttribute.Usage} - {command.Summary}");
+                }
             }
 
             return builder.ToString();

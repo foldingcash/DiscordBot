@@ -68,7 +68,8 @@
         }
 
         [Command("user")]
-        [Summary("Get user stats")]
+        [Usage("{address}")]
+        [Summary("Get your stats for the next distribution based on your address")]
         [Development]
         public async Task GetUserStats(string bitcoinAddress)
         {
@@ -90,7 +91,8 @@
         }
 
         [Command("lookup")]
-        [Summary("Search for a user")]
+        [Usage("{search criteria}")]
+        [Summary("Helps to find yourself, not case sensitive and searches the start and end for a match")]
         [Development]
         public async Task LookupUser(string searchCriteria)
         {
