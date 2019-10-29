@@ -192,7 +192,8 @@
 
             foreach (CommandInfo command in commandList)
             {
-                var usageAttribute = command.Attributes.FirstOrDefault(attribute => attribute is UsageAttribute) as UsageAttribute;
+                var usageAttribute =
+                    command.Attributes.FirstOrDefault(attribute => attribute is UsageAttribute) as UsageAttribute;
 
                 if (usageAttribute is default(UsageAttribute))
                 {

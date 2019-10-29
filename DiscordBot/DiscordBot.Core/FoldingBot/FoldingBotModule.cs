@@ -99,6 +99,15 @@
             await ReplyAsync(await service.LookupUser(searchCriteria));
         }
 
+        [Command("{default}")]
+        [Default]
+        [Hidden]
+        [Summary("Show the list of available commands")]
+        public async Task NoCommand()
+        {
+            await ReplyAsync(service.Help());
+        }
+
         private async Task ReplyAsync(string message, [CallerMemberName] string methodName = "")
         {
             logger.LogInformation("Method Invoked: {methodName}", methodName);

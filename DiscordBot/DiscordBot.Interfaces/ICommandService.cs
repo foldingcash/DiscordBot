@@ -11,6 +11,8 @@
 
         Task<IResult> ExecuteAsync(SocketCommandContext commandContext, int argumentPosition);
 
+        Task<IResult> ExecuteDefaultResponse(SocketCommandContext commandContext, int argumentPosition);
+
         IEnumerable<CommandInfo> GetCommands();
     }
 }

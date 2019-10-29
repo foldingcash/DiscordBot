@@ -75,15 +75,23 @@
                 return;
             }
 
+            var commandContext = new SocketCommandContext(client, message);
+
             var argumentPosition = 0;
             if (!message.HasMentionPrefix(client.CurrentUser, ref argumentPosition))
             {
+                IResult defaultResponseResult =
+                    await commandService.ExecuteDefaultResponse(commandContext, argumentPosition);
+                await LogErrorResultAsync(commandContext, defaultResponseResult);
                 return;
             }
 
-            var commandContext = new SocketCommandContext(client, message);
             IResult result = await commandService.ExecuteAsync(commandContext, argumentPosition);
+            await LogErrorResultAsync(commandContext, result);
+        }
 
+        private async Task LogErrorResultAsync(SocketCommandContext commandContext, IResult result)
+        {
             if (result.Error.HasValue && result.Error.Value != CommandError.UnknownCommand)
             {
                 await commandContext.Channel.SendMessageAsync(result.ToString());
