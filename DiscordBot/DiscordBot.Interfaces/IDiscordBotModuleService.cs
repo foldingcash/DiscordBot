@@ -8,16 +8,14 @@
 
         string GetFoldingBrowserUrl();
 
-        string GetMarketValue();
+        Task<string> GetMarketValue();
 
         string GetNextDistributionDate();
 
-        string GetUserStats();
-
-        string GetWebClientUrl();
+        Task<string> GetUserStats(string bitcoinAddress);
 
         string Help();
 
-        Task<string> LookupUser(string username);
+        Task<string> LookupUser(string searchCriteria);
     }
 }

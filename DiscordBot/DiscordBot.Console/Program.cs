@@ -1,12 +1,11 @@
 ﻿namespace DiscordBot.Console
 {
     using DiscordBot.Core;
-    using DiscordBot.Core.Modules;
+    using DiscordBot.Core.FoldingBot;
     using DiscordBot.Interfaces;
 
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
-    using Microsoft.Extensions.Logging;
 
     public class Program
     {
@@ -19,10 +18,12 @@
         {
             return Host.CreateDefaultBuilder(args).ConfigureServices(services =>
             {
-                services.AddLogging(options => { options.SetMinimumLevel(LogLevel.Trace); }).AddHostedService<Bot>();
+                services.AddLogging();
+
+                services.AddHostedService<Bot>();
 
                 services.AddSingleton<ICommandService, CommandProvider>();
-                services.AddTransient<IDiscordBotModuleService, FoldingBotModuleProvider>();
+                services.AddSingleton<IDiscordBotModuleService, FoldingBotModuleProvider>();
             });
         }
     }

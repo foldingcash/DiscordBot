@@ -1,4 +1,4 @@
-﻿namespace DiscordBot.Core.Modules
+﻿namespace DiscordBot.Core.FoldingBot
 {
     using System.Runtime.CompilerServices;
     using System.Threading.Tasks;
@@ -7,11 +7,14 @@
     using Discord.Commands;
 
     using DiscordBot.Interfaces;
+    using DiscordBot.Interfaces.Attributes;
 
     using Microsoft.Extensions.Logging;
 
     public class FoldingBotModule : ModuleBase<SocketCommandContext>
     {
+        private readonly Emoji hourglass = new Emoji("\u23F3");
+
         private readonly ILogger<FoldingBotModule> logger;
 
         private readonly IDiscordBotModuleService service;
@@ -52,10 +55,9 @@
 
         [Command("market")]
         [Summary("Get the current market value of our token")]
-        [Development]
-        public Task GetMarketValue()
+        public async Task GetMarketValue()
         {
-            return ReplyAsync(service.GetMarketValue());
+            await ReplyAsync(await service.GetMarketValue());
         }
 
         [Command("distribution")]
@@ -67,18 +69,12 @@
         }
 
         [Command("user")]
-        [Summary("Get user stats")]
+        [Usage("{address}")]
+        [Summary("Get your stats for the next distribution based on your address")]
         [Development]
-        public Task GetUserStats()
+        public async Task GetUserStats(string bitcoinAddress)
         {
-            return ReplyAsync(service.GetUserStats());
-        }
-
-        [Command("nacl")]
-        [Summary("Use the web client to start folding today")]
-        public Task GetWebClientUrl()
-        {
-            return ReplyAsync(service.GetWebClientUrl());
+            await ReplyAsync(await service.GetUserStats(bitcoinAddress));
         }
 
         [Command("help")]
@@ -89,23 +85,34 @@
         }
 
         [Command("lookup")]
-        [Summary("Search for a user")]
+        [Usage("{search criteria}")]
+        [Summary("Helps to find yourself, not case sensitive and searches the start and end for a match")]
         [Development]
-        public async Task LookupUser(string username)
+        public async Task LookupUser(string searchCriteria)
         {
-            //var hourglass = new Emoji("\u23F3");
-            //await Context.Message.AddReactionAsync(hourglass);
-            //await Context.Message.RemoveReactionAsync(hourglass, Context.User, RequestOptions.Default);
-
-            await ReplyAsync(await service.LookupUser(username));
+            await ReplyAsync(await service.LookupUser(searchCriteria));
         }
 
-        private Task ReplyAsync(string message, [CallerMemberName] string methodName = "")
+        [Command("{default}")]
+        [Default]
+        [Hidden]
+        [Summary("Show the list of available commands")]
+        public async Task NoCommand()
+        {
+            await ReplyAsync(service.Help());
+        }
+
+        private async Task ReplyAsync(string message, [CallerMemberName] string methodName = "")
         {
             logger.LogInformation("Method Invoked: {methodName}", methodName);
-            Task<IUserMessage> task = base.ReplyAsync(message);
+
+            await Context.Message.AddReactionAsync(hourglass);
+
+            await base.ReplyAsync(message);
+
+            await Context.Message.RemoveReactionAsync(hourglass, Context.Client.CurrentUser, RequestOptions.Default);
+
             logger.LogInformation("Method Finished: {methodName}", methodName);
-            return task;
         }
     }
 }

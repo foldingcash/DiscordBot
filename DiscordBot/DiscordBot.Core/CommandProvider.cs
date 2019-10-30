@@ -7,8 +7,9 @@
 
     using Discord.Commands;
 
-    using DiscordBot.Core.Modules;
+    using DiscordBot.Core.FoldingBot;
     using DiscordBot.Interfaces;
+    using DiscordBot.Interfaces.Attributes;
 
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;
@@ -56,6 +57,21 @@
             }
 
             return await innerService.ExecuteAsync(commandContext, argumentPosition, services);
+        }
+
+        public async Task<IResult> ExecuteDefaultResponse(SocketCommandContext commandContext, int argumentPosition)
+        {
+            CommandInfo defaultCommand = innerService.Commands.FirstOrDefault(command =>
+                command.Attributes.Any(attribute =>
+                    attribute is DefaultAttribute));
+
+            if (defaultCommand is default(CommandInfo))
+            {
+                return ExecuteResult.FromSuccess();
+            }
+
+            return await defaultCommand.ExecuteAsync(commandContext, Enumerable.Empty<object>(),
+                       Enumerable.Empty<object>(), services);
         }
 
         public IEnumerable<CommandInfo> GetCommands()
