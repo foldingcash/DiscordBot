@@ -114,8 +114,7 @@
 
         private void LogEnvironment()
         {
-            logger.LogInformation("Hosting environment: {environment}", environment.EnvironmentName);
-            logger.LogInformation("PID: {pid}", Process.GetCurrentProcess().Id);
+            logger.LogInformation("Hosting environment: {environment} PID: {PID}", environment.EnvironmentName, Process.GetCurrentProcess().Id);
         }
     }
 }
