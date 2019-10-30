@@ -14,8 +14,6 @@
 
         Task<string> GetUserStats(string bitcoinAddress);
 
-        string GetWebClientUrl();
-
         string Help();
 
         Task<string> LookupUser(string searchCriteria);

@@ -178,11 +178,6 @@
             }
         }
 
-        public string GetWebClientUrl()
-        {
-            return $"Visit {configuration.GetAppSetting("WebClientUrl")} to fold using the web client";
-        }
-
         public string Help()
         {
             IEnumerable<CommandInfo> commandList = commandService.GetCommands();

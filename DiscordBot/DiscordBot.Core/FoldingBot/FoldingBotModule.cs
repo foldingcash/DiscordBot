@@ -76,13 +76,6 @@
             await ReplyAsync(await service.GetUserStats(bitcoinAddress));
         }
 
-        [Command("nacl")]
-        [Summary("Use the web client to start folding today")]
-        public Task GetWebClientUrl()
-        {
-            return ReplyAsync(service.GetWebClientUrl());
-        }
-
         [Command("help")]
         [Summary("Show the list of available commands")]
         public async Task Help()
