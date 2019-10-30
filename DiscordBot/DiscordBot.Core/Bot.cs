@@ -1,6 +1,7 @@
 ﻿namespace DiscordBot.Core
 {
     using System;
+    using System.Diagnostics;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -20,21 +21,26 @@
 
         private readonly IConfiguration configuration;
 
+        private readonly IHostEnvironment environment;
+
         private readonly ILogger<Bot> logger;
 
         private DiscordSocketClient client;
 
-        public Bot(IConfiguration configuration, ICommandService commandService, ILogger<Bot> logger)
+        public Bot(IConfiguration configuration, ICommandService commandService, ILogger<Bot> logger,
+                   IHostEnvironment environment)
         {
             this.configuration = configuration;
             this.commandService = commandService;
             this.logger = logger;
+            this.environment = environment;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             try
             {
+                LogStartup();
                 await commandService.AddModulesAsync();
                 client = new DiscordSocketClient();
                 string token = GetToken();
@@ -96,6 +102,12 @@
             {
                 await commandContext.Channel.SendMessageAsync(result.ToString());
             }
+        }
+
+        private void LogStartup()
+        {
+            logger.LogInformation("Environment: {environment}", environment.EnvironmentName);
+            logger.LogInformation("PID: {pid}", Process.GetCurrentProcess().Id);
         }
     }
 }
