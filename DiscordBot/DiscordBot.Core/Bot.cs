@@ -70,8 +70,6 @@
 
         private async Task HandleMessageReceived(SocketMessage rawMessage)
         {
-            LogEnvironment();
-
             // Ignore system messages and messages from bots
             if (!(rawMessage is SocketUserMessage message))
             {
