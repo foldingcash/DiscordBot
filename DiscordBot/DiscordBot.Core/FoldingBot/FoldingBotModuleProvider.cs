@@ -15,6 +15,7 @@
 
     using DiscordBot.Core.Models;
     using DiscordBot.Interfaces;
+    using DiscordBot.Interfaces.Attributes;
 
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;

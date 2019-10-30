@@ -1,4 +1,4 @@
-﻿namespace DiscordBot.Core
+﻿namespace DiscordBot.Interfaces.Attributes
 {
     using System;
 

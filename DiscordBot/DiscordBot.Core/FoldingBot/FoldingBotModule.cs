@@ -7,6 +7,7 @@
     using Discord.Commands;
 
     using DiscordBot.Interfaces;
+    using DiscordBot.Interfaces.Attributes;
 
     using Microsoft.Extensions.Logging;
 
