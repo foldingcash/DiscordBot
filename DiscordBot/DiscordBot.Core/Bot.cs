@@ -70,6 +70,8 @@
 
         private async Task HandleMessageReceived(SocketMessage rawMessage)
         {
+            LogEnvironment();
+
             // Ignore system messages and messages from bots
             if (!(rawMessage is SocketUserMessage message))
             {
@@ -106,7 +108,13 @@
 
         private void LogStartup()
         {
-            logger.LogInformation("Environment: {environment}", environment.EnvironmentName);
+            logger.LogInformation("Bot starting");
+            LogEnvironment();
+        }
+
+        private void LogEnvironment()
+        {
+            logger.LogInformation("Hosting environment: {environment}", environment.EnvironmentName);
             logger.LogInformation("PID: {pid}", Process.GetCurrentProcess().Id);
         }
     }
