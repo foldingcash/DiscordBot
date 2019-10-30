@@ -181,9 +181,16 @@
 
         public string Help()
         {
-            IEnumerable<CommandInfo> commandList = commandService.GetCommands();
+            IEnumerable<CommandInfo> commandList = GetCommands();
+
             var builder = new StringBuilder();
 
+            builder.AppendLine(
+                "Are you trying to use me? Tag me, tell me a command, and provide additional information when needed.");
+            builder.AppendLine();
+            builder.Append($"Usage: @{configuration.GetAppSetting("BotName")} ");
+            builder.AppendLine("{command} {data}");
+            builder.AppendLine();
             builder.AppendLine("Commands -");
 
             foreach (CommandInfo command in commandList)
@@ -267,6 +274,13 @@
                     return response;
                 }
             }
+        }
+
+        private IEnumerable<CommandInfo> GetCommands()
+        {
+            List<CommandInfo> commands = commandService.GetCommands().ToList();
+            commands.Sort((command1, command2) => string.Compare(command1.Name, command2.Name, StringComparison.CurrentCulture));
+            return commands;
         }
 
         private DateTime GetDistributionDate(int year, int month)
