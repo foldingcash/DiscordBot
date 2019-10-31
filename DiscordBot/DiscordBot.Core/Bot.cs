@@ -86,17 +86,31 @@
             var argumentPosition = 0;
             if (!message.HasMentionPrefix(client.CurrentUser, ref argumentPosition))
             {
-                IResult defaultResponseResult =
-                    await commandService.ExecuteDefaultResponse(commandContext, argumentPosition);
-                await LogErrorResultAsync(commandContext, defaultResponseResult);
+                // The message @Bot will come as <@{Id}> but client.CurrentUser.Mention is <@!{Id}>
+                // So to be safe check for both in case it is changed...
+                if (message.Content.Equals(client.CurrentUser.Mention)
+                    || message.Content.Equals(client.CurrentUser.Mention.Replace("!", string.Empty)))
+                {
+                    IResult defaultResponseResult =
+                        await commandService.ExecuteDefaultResponse(commandContext, argumentPosition);
+                    await LogErrorResult(commandContext, defaultResponseResult);
+                }
+
                 return;
             }
 
             IResult result = await commandService.ExecuteAsync(commandContext, argumentPosition);
-            await LogErrorResultAsync(commandContext, result);
+
+            await LogErrorResult(commandContext, result);
         }
 
-        private async Task LogErrorResultAsync(SocketCommandContext commandContext, IResult result)
+        private void LogEnvironment()
+        {
+            logger.LogInformation("Hosting environment: {environment} PID: {PID}", environment.EnvironmentName,
+                Process.GetCurrentProcess().Id);
+        }
+
+        private async Task LogErrorResult(SocketCommandContext commandContext, IResult result)
         {
             if (result.Error.HasValue && result.Error.Value != CommandError.UnknownCommand)
             {
@@ -108,11 +122,6 @@
         {
             logger.LogInformation("Bot starting");
             LogEnvironment();
-        }
-
-        private void LogEnvironment()
-        {
-            logger.LogInformation("Hosting environment: {environment} PID: {PID}", environment.EnvironmentName, Process.GetCurrentProcess().Id);
         }
     }
 }

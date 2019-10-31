@@ -47,6 +47,11 @@
 
             SearchResult searchResult = innerService.Search(commandContext, argumentPosition);
 
+            if (!searchResult.IsSuccess)
+            {
+                return await ExecuteDefaultResponse(commandContext, argumentPosition);
+            }
+
             bool matchIsDevCommand = searchResult.Commands.Any(command =>
                 command.Command.Attributes.Any(attribute =>
                     attribute is DevelopmentAttribute));
