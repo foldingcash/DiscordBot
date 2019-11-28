@@ -83,15 +83,17 @@
         {
             bool isDevMode = IsDevelopmentEnvironment();
 
-            IEnumerable<CommandInfo> removedHiddenCommands =
-                innerService.Commands.Where(command =>
-                    command.Attributes.All(attribute => !(attribute is HiddenAttribute)));
-
-            IEnumerable<CommandInfo> removedDevCommands =
-                isDevMode ? removedHiddenCommands : removedHiddenCommands.Where(command =>
-                    command.Attributes.All(attribute => !(attribute is DevelopmentAttribute)));
-
-            return removedDevCommands;
+            return isDevMode ? innerService.Commands : innerService
+                                                       .Commands
+                                                       .Where(command =>
+                                                           command.Attributes.All(attribute =>
+                                                               !(attribute is HiddenAttribute)))
+                                                       .Where(command =>
+                                                           command.Attributes.All(attribute =>
+                                                               !(attribute is DevelopmentAttribute)))
+                                                       .Where(command =>
+                                                           command.Attributes.All(attribute =>
+                                                               !(attribute is DeprecatedAttribute)));
         }
 
         private string GetDevChannel()
