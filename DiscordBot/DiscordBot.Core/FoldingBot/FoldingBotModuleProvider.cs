@@ -279,7 +279,8 @@
         private IEnumerable<CommandInfo> GetCommands()
         {
             List<CommandInfo> commands = commandService.GetCommands().ToList();
-            commands.Sort((command1, command2) => string.Compare(command1.Name, command2.Name, StringComparison.CurrentCulture));
+            commands.Sort((command1, command2) =>
+                string.Compare(command1.Name, command2.Name, StringComparison.CurrentCulture));
             return commands;
         }
 
