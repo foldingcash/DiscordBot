@@ -55,7 +55,7 @@
 
         [Command("market")]
         [Summary("Get the current market value of our token")]
-        [Deprecated]
+        [Hidden]
         public async Task GetMarketValue()
         {
             await ReplyAsync(await service.GetMarketValue());
