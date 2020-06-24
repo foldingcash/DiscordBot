@@ -45,22 +45,7 @@
         {
             return ReplyAsync(service.GetFoldingAtHomeUrl());
         }
-
-        [Command("browser")]
-        [Summary("Download the folding browser to assist your journey into folding")]
-        public Task GetFoldingBrowserUrl()
-        {
-            return ReplyAsync(service.GetFoldingBrowserUrl());
-        }
-
-        [Command("market")]
-        [Summary("Get the current market value of our token")]
-        [Hidden]
-        public async Task GetMarketValue()
-        {
-            await ReplyAsync(await service.GetMarketValue());
-        }
-
+        
         [Command("distribution")]
         [Summary("Get the date of our next distribution")]
         [Development]

@@ -41,62 +41,6 @@
             return $"Visit {configuration.GetAppSetting("FoldingAtHomeUrl")} to download folding@home";
         }
 
-        public string GetFoldingBrowserUrl()
-        {
-            return $"Visit {configuration.GetAppSetting("FoldingBrowserUrl")} to download the folding browser";
-        }
-
-        public async Task<string> GetMarketValue()
-        {
-            var coinMarketCapUri = new Uri(configuration.GetAppSetting("CoinMarketCap.Uri"), UriKind.Absolute);
-            var getFoldingCoinValuePath = new Uri("/v1/ticker/foldingcoin?convert=USD", UriKind.Relative);
-            var requestUri = new Uri(coinMarketCapUri, getFoldingCoinValuePath);
-
-            var serializer = new DataContractJsonSerializer(typeof (CoinMarketCapMarketValueResponse[]));
-
-            using var client = new HttpClient();
-
-            logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
-
-            HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
-
-            logger.LogInformation("Finished GET from URI");
-
-            string responseContent = await httpResponse.Content.ReadAsStringAsync();
-
-            if (!httpResponse.IsSuccessStatusCode)
-            {
-                logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
-                    httpResponse.StatusCode, responseContent);
-                return "The api is down :( try again later";
-            }
-
-            logger.LogTrace("responseContent: {responseContent}", responseContent);
-
-            await using var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent));
-
-            var marketValueResponses =
-                serializer.ReadObject(streamReader) as CoinMarketCapMarketValueResponse[];
-
-            if (marketValueResponses is null || marketValueResponses.Length == 0)
-            {
-                return "The api is down :( try again later";
-            }
-
-            CoinMarketCapMarketValueResponse marketValueResponse = marketValueResponses.First();
-
-            var stringBuilder = new StringBuilder();
-
-            stringBuilder.AppendLine("Source: coinmarketcap.com");
-            stringBuilder.AppendLine($"\tName: {marketValueResponse.Name}");
-            stringBuilder.AppendLine($"\tSymbol: {marketValueResponse.Symbol}");
-            stringBuilder.AppendLine($"\tPrice in $: {marketValueResponse.PriceInUsd}");
-            stringBuilder.AppendLine($"\tPrice in BTC: {marketValueResponse.PriceInBtc}");
-            stringBuilder.AppendLine($"\tLast Updated: {marketValueResponse.LastUpdatedDateTime}");
-
-            return stringBuilder.ToString();
-        }
-
         public string GetNextDistributionDate()
         {
             DateTime now = DateTime.Now;
