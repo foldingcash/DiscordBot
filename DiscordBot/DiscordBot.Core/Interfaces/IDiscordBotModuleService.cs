@@ -1,14 +1,10 @@
-﻿namespace DiscordBot.Interfaces
+﻿namespace DiscordBot.Core.Interfaces
 {
     using System.Threading.Tasks;
 
     public interface IDiscordBotModuleService
     {
         string GetFoldingAtHomeUrl();
-
-        string GetFoldingBrowserUrl();
-
-        Task<string> GetMarketValue();
 
         string GetNextDistributionDate();
 

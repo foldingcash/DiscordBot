@@ -9,7 +9,7 @@
     using Discord.Commands;
     using Discord.WebSocket;
 
-    using DiscordBot.Interfaces;
+    using DiscordBot.Core.Interfaces;
 
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Hosting;

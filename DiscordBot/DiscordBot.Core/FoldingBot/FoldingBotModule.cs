@@ -6,12 +6,12 @@
     using Discord;
     using Discord.Commands;
 
-    using DiscordBot.Interfaces;
-    using DiscordBot.Interfaces.Attributes;
+    using DiscordBot.Core.Attributes;
+    using DiscordBot.Core.Interfaces;
 
     using Microsoft.Extensions.Logging;
 
-    public class FoldingBotModule : ModuleBase<SocketCommandContext>
+    internal class FoldingBotModule : ModuleBase<SocketCommandContext>
     {
         private readonly Emoji hourglass = new Emoji("\u23F3");
 
@@ -45,7 +45,7 @@
         {
             return ReplyAsync(service.GetFoldingAtHomeUrl());
         }
-        
+
         [Command("distribution")]
         [Summary("Get the date of our next distribution")]
         [Development]

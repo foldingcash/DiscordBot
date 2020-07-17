@@ -7,9 +7,10 @@
 
     using Discord.Commands;
 
+    using DiscordBot.Core.Attributes;
+    using DiscordBot.Core.Extensions;
     using DiscordBot.Core.FoldingBot;
-    using DiscordBot.Interfaces;
-    using DiscordBot.Interfaces.Attributes;
+    using DiscordBot.Core.Interfaces;
 
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;

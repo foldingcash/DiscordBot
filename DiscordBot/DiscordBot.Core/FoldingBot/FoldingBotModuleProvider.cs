@@ -13,9 +13,10 @@
 
     using Discord.Commands;
 
+    using DiscordBot.Core.Attributes;
+    using DiscordBot.Core.Extensions;
+    using DiscordBot.Core.Interfaces;
     using DiscordBot.Core.Models;
-    using DiscordBot.Interfaces;
-    using DiscordBot.Interfaces.Attributes;
 
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;
@@ -99,13 +100,11 @@
                 return "The api is down :( try again later";
             }
 
-            DistroUser distroUser =
-                distroResponse.Distro.FirstOrDefault(user => user.BitcoinAddress == bitcoinAddress);
+            DistroUser distroUser = distroResponse.Distro.FirstOrDefault(user => user.BitcoinAddress == bitcoinAddress);
 
             if (distroUser is null)
             {
-                return
-                    "We were unable to find your bitcoin address. Ensure the address is correct and try again.";
+                return "We were unable to find your bitcoin address. Ensure the address is correct and try again.";
             }
 
             var stringBuilder = new StringBuilder();
@@ -190,15 +189,13 @@
                 member.UserName.StartsWith(searchCriteria,
                     StringComparison
                         .CurrentCultureIgnoreCase)
-                || member.UserName.EndsWith(
-                    searchCriteria,
+                || member.UserName.EndsWith(searchCriteria,
                     StringComparison
                         .CurrentCultureIgnoreCase));
 
             if (matchingMembers.IsNullOrEmpty())
             {
-                return
-                    "No matches found. Ensure you are searching the start or ending of your username and try again.";
+                return "No matches found. Ensure you are searching the start or ending of your username and try again.";
             }
 
             string response = $"Found the following matches:{Environment.NewLine}"
