@@ -26,6 +26,7 @@
         }
 
         [Command("bad bot")]
+        [Summary("Tell the bot it's being bad")]
         [Hidden]
         public Task AcknowledgeBadBot()
         {
@@ -33,6 +34,7 @@
         }
 
         [Command("good bot")]
+        [Summary("Tell the bot it's being good")]
         [Hidden]
         public Task AcknowledgeGoodBot()
         {
@@ -40,7 +42,7 @@
         }
 
         [Command("fah")]
-        [Summary("Download from Folding@Home to start folding today or update to the latest software")]
+        [Summary("Start folding today or update to the latest software")]
         public Task GetFoldingAtHomeUrl()
         {
             return ReplyAsync(service.GetFoldingAtHomeUrl());
