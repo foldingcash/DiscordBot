@@ -48,6 +48,13 @@
             return ReplyAsync(service.GetFoldingAtHomeUrl());
         }
 
+        [Command("website")]
+        [Summary("Learn more about this project")]
+        public Task GetHomeUrl()
+        {
+            return ReplyAsync(service.GetHomeUrl());
+        }
+
         [Command("distribution")]
         [Summary("Get the date of our next distribution")]
         [Development]

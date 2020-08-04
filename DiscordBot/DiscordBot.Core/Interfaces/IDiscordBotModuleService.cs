@@ -6,6 +6,8 @@
     {
         string GetFoldingAtHomeUrl();
 
+        string GetHomeUrl();
+
         string GetNextDistributionDate();
 
         Task<string> GetUserStats(string bitcoinAddress);

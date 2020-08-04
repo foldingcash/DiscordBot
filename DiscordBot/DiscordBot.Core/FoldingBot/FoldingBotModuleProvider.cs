@@ -42,6 +42,11 @@
             return $"Visit {configuration.GetAppSetting("FoldingAtHomeUrl")} to download folding@home";
         }
 
+        public string GetHomeUrl()
+        {
+            return $"Visit {configuration.GetAppSetting("HomeUrl")} to learn more about this project";
+        }
+
         public string GetNextDistributionDate()
         {
             DateTime now = DateTime.Now;
