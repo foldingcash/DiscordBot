@@ -29,12 +29,19 @@
 
         private readonly ILogger<FoldingBotModuleProvider> logger;
 
+        private Func<string, Task> reply = message => Task.CompletedTask;
+
         public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger, IConfiguration configuration,
                                         ICommandService commandService)
         {
             this.logger = logger;
             this.configuration = configuration;
             this.commandService = commandService;
+        }
+
+        public Func<string, Task> Reply
+        {
+            set => reply = value;
         }
 
         public string GetFoldingAtHomeUrl()
@@ -76,31 +83,9 @@
             var getDistroPath = new Uri("/v1/GetDistro/Next", UriKind.Relative);
             var requestUri = new Uri(foldingApiUri, getDistroPath);
 
-            var serializer = new DataContractJsonSerializer(typeof (DistroResponse));
+            DistroResponse distroResponse = await CallApi<DistroResponse>(requestUri);
 
-            using var client = new HttpClient();
-
-            logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
-
-            HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
-
-            logger.LogInformation("Finished GET from URI");
-
-            string responseContent = await httpResponse.Content.ReadAsStringAsync();
-
-            if (!httpResponse.IsSuccessStatusCode)
-            {
-                logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
-                    httpResponse.StatusCode, responseContent);
-                return "The api is down :( try again later";
-            }
-
-            logger.LogTrace("responseContent: {responseContent}", responseContent);
-
-            await using var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent));
-            var distroResponse = serializer.ReadObject(streamReader) as DistroResponse;
-
-            if (distroResponse is null || !distroResponse.Success)
+            if (distroResponse == default)
             {
                 return "The api is down :( try again later";
             }
@@ -160,32 +145,9 @@
             var getMemberStatsPath = new Uri("/v1/GetMembers", UriKind.Relative);
             var requestUri = new Uri(foldingApiUri, getMemberStatsPath);
 
-            var serializer = new DataContractJsonSerializer(typeof (MembersResponse));
+            MembersResponse membersResponse = await CallApi<MembersResponse>(requestUri);
 
-            using var client = new HttpClient();
-
-            logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
-
-            HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
-
-            logger.LogInformation("Finished GET from URI");
-
-            string responseContent = await httpResponse.Content.ReadAsStringAsync();
-
-            if (!httpResponse.IsSuccessStatusCode)
-            {
-                logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
-                    httpResponse.StatusCode, responseContent);
-                return "The api is down :( try again later";
-            }
-
-            logger.LogTrace("responseContent: {responseContent}", responseContent);
-
-            await using var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent));
-
-            var membersResponse = serializer.ReadObject(streamReader) as MembersResponse;
-
-            if (membersResponse is null || !membersResponse.Success)
+            if (membersResponse == default)
             {
                 return "The api is down :( try again later";
             }
@@ -210,6 +172,42 @@
             {
                 response = response.Substring(0, 2000 - 3);
                 response += "...";
+            }
+
+            return response;
+        }
+
+        private async Task<T> CallApi<T>(Uri requestUri)
+            where T : BaseResponse
+        {
+            var serializer = new DataContractJsonSerializer(typeof (T));
+
+            using var client = new HttpClient();
+
+            logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
+
+            HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
+
+            logger.LogInformation("Finished GET from URI");
+
+            string responseContent = await httpResponse.Content.ReadAsStringAsync();
+
+            if (!httpResponse.IsSuccessStatusCode)
+            {
+                logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
+                    httpResponse.StatusCode, responseContent);
+                return default;
+            }
+
+            logger.LogTrace("responseContent: {responseContent}", responseContent);
+
+            await using var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent));
+
+            var response = serializer.ReadObject(streamReader) as T;
+
+            if (response is null || !response.Success)
+            {
+                return default;
             }
 
             return response;

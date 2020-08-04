@@ -23,6 +23,8 @@
         {
             this.service = service;
             this.logger = logger;
+
+            service.Reply = async message => await base.ReplyAsync(message);
         }
 
         [Command("bad bot")]
