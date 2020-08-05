@@ -32,17 +32,17 @@
             service.Reply = message => Reply(message, nameof(IDiscordBotModuleService));
         }
 
+        [Hidden]
         [Command("bad bot")]
         [Summary("Tell the bot it's being bad")]
-        [Hidden]
         public Task AcknowledgeBadBot()
         {
             return Reply("D:");
         }
 
+        [Hidden]
         [Command("good bot")]
         [Summary("Tell the bot it's being good")]
-        [Hidden]
         public Task AcknowledgeGoodBot()
         {
             return Reply(":D");
@@ -64,7 +64,6 @@
 
         [Command("distribution")]
         [Summary("Get the date of our next distribution")]
-        [Development]
         public Task GetNextDistributionDate()
         {
             return Reply(service.GetNextDistributionDate());
@@ -73,7 +72,6 @@
         [Command("user", RunMode = RunMode.Async)]
         [Usage("{address}")]
         [Summary("Get your stats for the next distribution based on your address")]
-        [Development]
         public async Task GetUserStats(string bitcoinAddress)
         {
             await ReplyAsyncMode(async () => await service.GetUserStats(bitcoinAddress));
@@ -89,25 +87,24 @@
         [Command("lookup", RunMode = RunMode.Async)]
         [Usage("{search criteria}")]
         [Summary("Helps to find yourself, not case sensitive and searches the start and end for a match")]
-        [Development]
         public async Task LookupUser(string searchCriteria)
         {
             await ReplyAsyncMode(async () => await service.LookupUser(searchCriteria));
         }
 
-        [Command("{default}")]
         [Default]
         [Hidden]
+        [Command("{default}")]
         [Summary("Show the list of available commands")]
         public async Task NoCommand()
         {
             await Reply(service.Help());
         }
 
+        [Development]
         [Command("test async", RunMode = RunMode.Async)]
         [Usage("{timeout in seconds defaults to 60 secs}")]
         [Summary("Test long running async methods")]
-        [Development]
         public async Task TestAsync(int timeout = 60)
         {
             logger.LogDebug("Testing async with timeout {timeout}", timeout);
