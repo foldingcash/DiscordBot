@@ -171,53 +171,70 @@
             return response;
         }
 
-        private async Task<T> CallApi<T>(string relativePath, int retryAttempts = 3, int sleepInSeconds = 60)
+        private async Task<T> CallApi<T>(string relativePath, int retryAttempts = 3, int sleepInSeconds = 300)
             where T : BaseResponse
         {
-            var foldingApiUri = new Uri(configuration.GetAppSetting("FoldingApiUri"), UriKind.Absolute);
-            var getMemberStatsPath = new Uri(relativePath, UriKind.Relative);
-            var requestUri = new Uri(foldingApiUri, getMemberStatsPath);
-
-            var serializer = new DataContractJsonSerializer(typeof (T));
-
-            using var client = new HttpClient();
-
-            logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
-
-            HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
-
-            logger.LogInformation("Finished GET from URI");
-
-            string responseContent = await httpResponse.Content.ReadAsStringAsync();
-
-            if (!httpResponse.IsSuccessStatusCode)
+            try
             {
-                logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
-                    httpResponse.StatusCode, responseContent);
+                var foldingApiUri = new Uri(configuration.GetAppSetting("FoldingApiUri"), UriKind.Absolute);
+                var getMemberStatsPath = new Uri(relativePath, UriKind.Relative);
+                var requestUri = new Uri(foldingApiUri, getMemberStatsPath);
 
-                if (IsTimeout(httpResponse.StatusCode) && retryAttempts > 0)
+                var serializer = new DataContractJsonSerializer(typeof (T));
+
+                using var client = new HttpClient();
+
+                logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
+
+                HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
+
+                logger.LogInformation("Finished GET from URI");
+
+                string responseContent = await httpResponse.Content.ReadAsStringAsync();
+
+                if (!httpResponse.IsSuccessStatusCode)
                 {
-                    await reply("The hamsters are slow today...please give us some more time");
-                    logger.LogDebug("Going to attempt to download again after sleeping");
+                    logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
+                        httpResponse.StatusCode, responseContent);
+
+                    if (IsTimeout(httpResponse.StatusCode) && retryAttempts > 0)
+                    {
+                        await reply("The hamsters are slow today...please give us more time");
+                        logger.LogDebug("Going to attempt to download again after sleeping");
+                        Thread.Sleep(sleepInSeconds * 1000);
+                        return await CallApi<T>(relativePath, --retryAttempts);
+                    }
+
+                    return default;
+                }
+
+                logger.LogTrace("responseContent: {responseContent}", responseContent);
+
+                await using var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent));
+
+                var response = serializer.ReadObject(streamReader) as T;
+
+                if (response is null || !response.Success)
+                {
+                    return default;
+                }
+
+                return response;
+            }
+            catch (TaskCanceledException exception)
+            {
+                if (retryAttempts > 0)
+                {
+                    await reply("The hamsters are slow today...please give us more time");
+                    logger.LogDebug(exception,"Going to attempt to download again after sleeping");
                     Thread.Sleep(sleepInSeconds * 1000);
                     return await CallApi<T>(relativePath, --retryAttempts);
                 }
 
-                return default;
+                await reply("The api is down :( try again later");
+                logger.LogError(exception, "There was an unhandled exception");
+                throw;
             }
-
-            logger.LogTrace("responseContent: {responseContent}", responseContent);
-
-            await using var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent));
-
-            var response = serializer.ReadObject(streamReader) as T;
-
-            if (response is null || !response.Success)
-            {
-                return default;
-            }
-
-            return response;
         }
 
         private IEnumerable<CommandInfo> GetCommands()
