@@ -24,8 +24,6 @@
         {
             this.service = service;
             this.logger = logger;
-
-            service.Reply = async message => await base.ReplyAsync(message);
         }
 
         [Command("bad bot")]
@@ -33,7 +31,7 @@
         [Hidden]
         public Task AcknowledgeBadBot()
         {
-            return ReplyAsync("D:");
+            return Reply("D:");
         }
 
         [Command("good bot")]
@@ -41,21 +39,21 @@
         [Hidden]
         public Task AcknowledgeGoodBot()
         {
-            return ReplyAsync(":D");
+            return Reply(":D");
         }
 
         [Command("fah")]
         [Summary("Start folding today or update to the latest software")]
         public Task GetFoldingAtHomeUrl()
         {
-            return ReplyAsync(service.GetFoldingAtHomeUrl());
+            return Reply(service.GetFoldingAtHomeUrl());
         }
 
         [Command("website")]
         [Summary("Learn more about this project")]
         public Task GetHomeUrl()
         {
-            return ReplyAsync(service.GetHomeUrl());
+            return Reply(service.GetHomeUrl());
         }
 
         [Command("distribution")]
@@ -63,32 +61,32 @@
         [Development]
         public Task GetNextDistributionDate()
         {
-            return ReplyAsync(service.GetNextDistributionDate());
+            return Reply(service.GetNextDistributionDate());
         }
 
-        [Command("user")]
+        [Command("user", RunMode = RunMode.Async)]
         [Usage("{address}")]
         [Summary("Get your stats for the next distribution based on your address")]
         [Development]
         public async Task GetUserStats(string bitcoinAddress)
         {
-            await ReplyAsync(await service.GetUserStats(bitcoinAddress));
+            await Reply(async () => await service.GetUserStats(bitcoinAddress));
         }
 
         [Command("help")]
         [Summary("Show the list of available commands")]
         public async Task Help()
         {
-            await ReplyAsync(service.Help());
+            await Reply(service.Help());
         }
 
-        [Command("lookup")]
+        [Command("lookup", RunMode = RunMode.Async)]
         [Usage("{search criteria}")]
         [Summary("Helps to find yourself, not case sensitive and searches the start and end for a match")]
         [Development]
         public async Task LookupUser(string searchCriteria)
         {
-            await ReplyAsync(await service.LookupUser(searchCriteria));
+            await Reply(async () => await service.LookupUser(searchCriteria));
         }
 
         [Command("{default}")]
@@ -97,10 +95,29 @@
         [Summary("Show the list of available commands")]
         public async Task NoCommand()
         {
-            await ReplyAsync(service.Help());
+            await Reply(service.Help());
         }
 
-        private async Task ReplyAsync(string message, [CallerMemberName] string methodName = "")
+        [Command("test async", RunMode = RunMode.Async)]
+        [Usage("{timeout in seconds defaults to 60 secs}")]
+        [Summary("Test long running async methods")]
+        [Development]
+        public async Task TestAsync(int timeout = 60)
+        {
+            logger.LogDebug("Testing async with timeout {timeout}", timeout);
+            await Reply(async () =>
+            {
+                await Task.Delay(timeout * 1000);
+                return "Async test finished";
+            });
+        }
+
+        private async Task Reply(string message, [CallerMemberName] string methodName = "")
+        {
+            await Reply(() => Task.FromResult(message), methodName);
+        }
+
+        private async Task Reply(Func<Task<string>> getMessage, [CallerMemberName] string methodName = "")
         {
             try
             {
@@ -108,7 +125,7 @@
 
                 await Context.Message.AddReactionAsync(hourglass);
 
-                await base.ReplyAsync(message);
+                await ReplyAsync(await getMessage.Invoke());
 
                 await Context.Message.RemoveReactionAsync(hourglass, Context.Client.CurrentUser,
                     RequestOptions.Default);
