@@ -14,6 +14,10 @@
 
     internal class FoldingBotModule : ModuleBase<SocketCommandContext>
     {
+        private static readonly object asyncLock = new object();
+
+        private static bool isRunningAsyncMethod;
+
         private readonly Emoji hourglass = new Emoji("\u23F3");
 
         private readonly ILogger<FoldingBotModule> logger;
@@ -24,6 +28,8 @@
         {
             this.service = service;
             this.logger = logger;
+
+            service.Reply = message => Reply(message, nameof(IDiscordBotModuleService));
         }
 
         [Command("bad bot")]
@@ -70,7 +76,7 @@
         [Development]
         public async Task GetUserStats(string bitcoinAddress)
         {
-            await Reply(async () => await service.GetUserStats(bitcoinAddress));
+            await ReplyAsyncMode(async () => await service.GetUserStats(bitcoinAddress));
         }
 
         [Command("help")]
@@ -86,7 +92,7 @@
         [Development]
         public async Task LookupUser(string searchCriteria)
         {
-            await Reply(async () => await service.LookupUser(searchCriteria));
+            await ReplyAsyncMode(async () => await service.LookupUser(searchCriteria));
         }
 
         [Command("{default}")]
@@ -105,7 +111,7 @@
         public async Task TestAsync(int timeout = 60)
         {
             logger.LogDebug("Testing async with timeout {timeout}", timeout);
-            await Reply(async () =>
+            await ReplyAsyncMode(async () =>
             {
                 await Task.Delay(timeout * 1000);
                 return "Async test finished";
@@ -135,6 +141,34 @@
             catch (Exception ex)
             {
                 logger.LogError(ex, "There was an unhandled exception");
+            }
+        }
+
+        private async Task ReplyAsyncMode(Func<Task<string>> getMessage, [CallerMemberName] string methodName = "")
+        {
+            var runAsync = true;
+
+            lock (asyncLock)
+            {
+                if (isRunningAsyncMethod)
+                {
+                    runAsync = false;
+                }
+                else
+                {
+                    isRunningAsyncMethod = true;
+                }
+            }
+
+            if (runAsync)
+            {
+                await Reply(getMessage, methodName);
+
+                isRunningAsyncMethod = false;
+            }
+            else
+            {
+                await Reply("Wait until the bot has finished responding to another user's long running request.");
             }
         }
     }
