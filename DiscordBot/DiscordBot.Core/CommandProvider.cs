@@ -41,7 +41,7 @@
 
         public async Task<IResult> ExecuteAsync(SocketCommandContext commandContext, int argumentPosition)
         {
-            if (IsDevelopmentEnvironment() && commandContext.Channel.Name != GetDevChannel())
+            if (commandContext.Channel.Name != GetBotChannel())
             {
                 return ExecuteResult.FromSuccess();
             }
@@ -67,6 +67,11 @@
 
         public async Task<IResult> ExecuteDefaultResponse(SocketCommandContext commandContext, int argumentPosition)
         {
+            if (commandContext.Channel.Name != GetBotChannel())
+            {
+                return ExecuteResult.FromSuccess();
+            }
+
             CommandInfo defaultCommand = innerService.Commands.FirstOrDefault(command =>
                 command.Attributes.Any(attribute =>
                     attribute is DefaultAttribute));
@@ -97,9 +102,9 @@
                                                                !(attribute is DeprecatedAttribute)));
         }
 
-        private string GetDevChannel()
+        private string GetBotChannel()
         {
-            return configuration.GetAppSetting("DevChannel");
+            return configuration.GetAppSetting("BotChannel");
         }
 
         private bool IsDevelopmentEnvironment()

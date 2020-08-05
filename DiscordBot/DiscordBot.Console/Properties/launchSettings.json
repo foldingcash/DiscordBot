@@ -3,7 +3,7 @@
     "DiscordBot.Console": {
       "commandName": "Project",
       "environmentVariables": {
-        "DOTNET_ENVIRONMENT": "development"
+        "DOTNET_ENVIRONMENT": "production"
       }
     }
   }
