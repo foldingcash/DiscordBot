@@ -4,9 +4,11 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Net;
     using System.Net.Http;
     using System.Runtime.Serialization.Json;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
 
     using Castle.Core.Internal;
@@ -79,11 +81,7 @@
 
         public async Task<string> GetUserStats(string bitcoinAddress)
         {
-            var foldingApiUri = new Uri(configuration.GetAppSetting("FoldingApiUri"), UriKind.Absolute);
-            var getDistroPath = new Uri("/v1/GetDistro/Next", UriKind.Relative);
-            var requestUri = new Uri(foldingApiUri, getDistroPath);
-
-            DistroResponse distroResponse = await CallApi<DistroResponse>(requestUri);
+            DistroResponse distroResponse = await CallApi<DistroResponse>("/v1/GetDistro/All");
 
             if (distroResponse == default)
             {
@@ -141,11 +139,7 @@
 
         public async Task<string> LookupUser(string searchCriteria)
         {
-            var foldingApiUri = new Uri(configuration.GetAppSetting("FoldingApiUri"), UriKind.Absolute);
-            var getMemberStatsPath = new Uri("/v1/GetMembers", UriKind.Relative);
-            var requestUri = new Uri(foldingApiUri, getMemberStatsPath);
-
-            MembersResponse membersResponse = await CallApi<MembersResponse>(requestUri);
+            MembersResponse membersResponse = await CallApi<MembersResponse>("/v1/GetMembers");
 
             if (membersResponse == default)
             {
@@ -177,9 +171,13 @@
             return response;
         }
 
-        private async Task<T> CallApi<T>(Uri requestUri)
+        private async Task<T> CallApi<T>(string relativePath, int retryAttempts = 3, int sleepInSeconds = 60)
             where T : BaseResponse
         {
+            var foldingApiUri = new Uri(configuration.GetAppSetting("FoldingApiUri"), UriKind.Absolute);
+            var getMemberStatsPath = new Uri(relativePath, UriKind.Relative);
+            var requestUri = new Uri(foldingApiUri, getMemberStatsPath);
+
             var serializer = new DataContractJsonSerializer(typeof (T));
 
             using var client = new HttpClient();
@@ -196,6 +194,15 @@
             {
                 logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
                     httpResponse.StatusCode, responseContent);
+
+                if (IsTimeout(httpResponse.StatusCode) && retryAttempts > 0)
+                {
+                    await reply("The hamsters are slow today...please give us some more time");
+                    logger.LogDebug("Going to attempt to download again after sleeping");
+                    Thread.Sleep(sleepInSeconds * 1000);
+                    return await CallApi<T>(relativePath, --retryAttempts);
+                }
+
                 return default;
             }
 
@@ -231,6 +238,12 @@
             }
 
             return distributionDate;
+        }
+
+        private bool IsTimeout(HttpStatusCode statusCode)
+        {
+            return statusCode == HttpStatusCode.BadGateway || statusCode == HttpStatusCode.GatewayTimeout
+                                                           || statusCode == HttpStatusCode.RequestTimeout;
         }
     }
 }

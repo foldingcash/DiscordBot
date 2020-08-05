@@ -1,5 +1,6 @@
 ﻿namespace DiscordBot.Core.FoldingBot
 {
+    using System;
     using System.Runtime.CompilerServices;
     using System.Threading.Tasks;
 
@@ -101,15 +102,23 @@
 
         private async Task ReplyAsync(string message, [CallerMemberName] string methodName = "")
         {
-            logger.LogInformation("Method Invoked: {methodName}", methodName);
+            try
+            {
+                logger.LogInformation("Method Invoked: {methodName}", methodName);
 
-            await Context.Message.AddReactionAsync(hourglass);
+                await Context.Message.AddReactionAsync(hourglass);
 
-            await base.ReplyAsync(message);
+                await base.ReplyAsync(message);
 
-            await Context.Message.RemoveReactionAsync(hourglass, Context.Client.CurrentUser, RequestOptions.Default);
+                await Context.Message.RemoveReactionAsync(hourglass, Context.Client.CurrentUser,
+                    RequestOptions.Default);
 
-            logger.LogInformation("Method Finished: {methodName}", methodName);
+                logger.LogInformation("Method Finished: {methodName}", methodName);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "There was an unhandled exception");
+            }
         }
     }
 }

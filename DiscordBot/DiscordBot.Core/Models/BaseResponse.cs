@@ -2,6 +2,7 @@
 {
     using System.Runtime.Serialization;
 
+    [DataContract]
     internal class BaseResponse
     {
         [DataMember(Name = "success")]
