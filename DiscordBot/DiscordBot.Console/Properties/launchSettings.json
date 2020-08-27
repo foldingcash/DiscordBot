@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "DiscordBot.Console": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "production"
+      }
+    }
+  }
+}

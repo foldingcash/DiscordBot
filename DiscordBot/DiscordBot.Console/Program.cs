@@ -2,7 +2,7 @@
 {
     using DiscordBot.Core;
     using DiscordBot.Core.FoldingBot;
-    using DiscordBot.Interfaces;
+    using DiscordBot.Core.Interfaces;
 
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;

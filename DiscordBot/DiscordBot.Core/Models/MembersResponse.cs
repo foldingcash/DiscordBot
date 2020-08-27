@@ -4,7 +4,7 @@
     using System.Runtime.Serialization;
 
     [DataContract]
-    internal class MembersResponse
+    internal class MembersResponse : BaseResponse
     {
         [DataMember(Name = "errorCount")]
         public int? ErrorCount { get; set; }
@@ -20,8 +20,5 @@
 
         [DataMember(Name = "members")]
         public IList<Member> Members { get; set; }
-
-        [DataMember(Name = "success")]
-        public bool Success { get; set; }
     }
 }

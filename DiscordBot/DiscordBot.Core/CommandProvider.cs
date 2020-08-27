@@ -7,9 +7,10 @@
 
     using Discord.Commands;
 
+    using DiscordBot.Core.Attributes;
+    using DiscordBot.Core.Extensions;
     using DiscordBot.Core.FoldingBot;
-    using DiscordBot.Interfaces;
-    using DiscordBot.Interfaces.Attributes;
+    using DiscordBot.Core.Interfaces;
 
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;
@@ -40,7 +41,7 @@
 
         public async Task<IResult> ExecuteAsync(SocketCommandContext commandContext, int argumentPosition)
         {
-            if (IsDevelopmentEnvironment() && commandContext.Channel.Name != GetDevChannel())
+            if (commandContext.Channel.Name != GetBotChannel())
             {
                 return ExecuteResult.FromSuccess();
             }
@@ -66,6 +67,11 @@
 
         public async Task<IResult> ExecuteDefaultResponse(SocketCommandContext commandContext, int argumentPosition)
         {
+            if (commandContext.Channel.Name != GetBotChannel())
+            {
+                return ExecuteResult.FromSuccess();
+            }
+
             CommandInfo defaultCommand = innerService.Commands.FirstOrDefault(command =>
                 command.Attributes.Any(attribute =>
                     attribute is DefaultAttribute));
@@ -83,20 +89,22 @@
         {
             bool isDevMode = IsDevelopmentEnvironment();
 
-            IEnumerable<CommandInfo> removedHiddenCommands =
-                innerService.Commands.Where(command =>
-                    command.Attributes.All(attribute => !(attribute is HiddenAttribute)));
-
-            IEnumerable<CommandInfo> removedDevCommands =
-                isDevMode ? removedHiddenCommands : removedHiddenCommands.Where(command =>
-                    command.Attributes.All(attribute => !(attribute is DevelopmentAttribute)));
-
-            return removedDevCommands;
+            return isDevMode ? innerService.Commands : innerService
+                                                       .Commands
+                                                       .Where(command =>
+                                                           command.Attributes.All(attribute =>
+                                                               !(attribute is HiddenAttribute)))
+                                                       .Where(command =>
+                                                           command.Attributes.All(attribute =>
+                                                               !(attribute is DevelopmentAttribute)))
+                                                       .Where(command =>
+                                                           command.Attributes.All(attribute =>
+                                                               !(attribute is DeprecatedAttribute)));
         }
 
-        private string GetDevChannel()
+        private string GetBotChannel()
         {
-            return configuration.GetAppSetting("DevChannel");
+            return configuration.GetAppSetting("BotChannel");
         }
 
         private bool IsDevelopmentEnvironment()

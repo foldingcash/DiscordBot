@@ -4,7 +4,7 @@
     using System.Runtime.Serialization;
 
     [DataContract]
-    internal class DistroResponse
+    internal class DistroResponse : BaseResponse
     {
         [DataMember(Name = "distro")]
         public IList<DistroUser> Distro { get; set; }
@@ -20,9 +20,6 @@
 
         [DataMember(Name = "firstErrorCode")]
         public int FirstErrorCode { get; set; }
-
-        [DataMember(Name = "success")]
-        public bool Success { get; set; }
 
         [DataMember(Name = "totalDistro")]
         public decimal? TotalDistro { get; set; }

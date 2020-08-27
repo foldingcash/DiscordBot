@@ -4,18 +4,21 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Net;
     using System.Net.Http;
     using System.Runtime.Serialization.Json;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
 
     using Castle.Core.Internal;
 
     using Discord.Commands;
 
+    using DiscordBot.Core.Attributes;
+    using DiscordBot.Core.Extensions;
+    using DiscordBot.Core.Interfaces;
     using DiscordBot.Core.Models;
-    using DiscordBot.Interfaces;
-    using DiscordBot.Interfaces.Attributes;
 
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;
@@ -28,6 +31,8 @@
 
         private readonly ILogger<FoldingBotModuleProvider> logger;
 
+        private Func<string, Task> reply = message => Task.CompletedTask;
+
         public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger, IConfiguration configuration,
                                         ICommandService commandService)
         {
@@ -36,67 +41,19 @@
             this.commandService = commandService;
         }
 
+        public Func<string, Task> Reply
+        {
+            set => reply = value;
+        }
+
         public string GetFoldingAtHomeUrl()
         {
             return $"Visit {configuration.GetAppSetting("FoldingAtHomeUrl")} to download folding@home";
         }
 
-        public string GetFoldingBrowserUrl()
+        public string GetHomeUrl()
         {
-            return $"Visit {configuration.GetAppSetting("FoldingBrowserUrl")} to download the folding browser";
-        }
-
-        public async Task<string> GetMarketValue()
-        {
-            var coinMarketCapUri = new Uri(configuration.GetAppSetting("CoinMarketCap.Uri"), UriKind.Absolute);
-            var getFoldingCoinValuePath = new Uri("/v1/ticker/foldingcoin?convert=USD", UriKind.Relative);
-            var requestUri = new Uri(coinMarketCapUri, getFoldingCoinValuePath);
-
-            var serializer = new DataContractJsonSerializer(typeof (CoinMarketCapMarketValueResponse[]));
-
-            using (var client = new HttpClient())
-            {
-                logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
-
-                HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
-
-                logger.LogInformation("Finished GET from URI");
-
-                string responseContent = await httpResponse.Content.ReadAsStringAsync();
-
-                if (!httpResponse.IsSuccessStatusCode)
-                {
-                    logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
-                        httpResponse.StatusCode, responseContent);
-                    return "The api is down :( try again later";
-                }
-
-                logger.LogTrace("responseContent: {responseContent}", responseContent);
-
-                using (var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent)))
-                {
-                    var marketValueResponses =
-                        serializer.ReadObject(streamReader) as CoinMarketCapMarketValueResponse[];
-
-                    if (marketValueResponses is null || marketValueResponses.Length == 0)
-                    {
-                        return "The api is down :( try again later";
-                    }
-
-                    CoinMarketCapMarketValueResponse marketValueResponse = marketValueResponses.First();
-
-                    var stringBuilder = new StringBuilder();
-
-                    stringBuilder.AppendLine("Source: coinmarketcap.com");
-                    stringBuilder.AppendLine($"\tName: {marketValueResponse.Name}");
-                    stringBuilder.AppendLine($"\tSymbol: {marketValueResponse.Symbol}");
-                    stringBuilder.AppendLine($"\tPrice in $: {marketValueResponse.PriceInUsd}");
-                    stringBuilder.AppendLine($"\tPrice in BTC: {marketValueResponse.PriceInBtc}");
-                    stringBuilder.AppendLine($"\tLast Updated: {marketValueResponse.LastUpdatedDateTime}");
-
-                    return stringBuilder.ToString();
-                }
-            }
+            return $"Visit {configuration.GetAppSetting("HomeUrl")} to learn more about this project";
         }
 
         public string GetNextDistributionDate()
@@ -124,59 +81,28 @@
 
         public async Task<string> GetUserStats(string bitcoinAddress)
         {
-            var foldingApiUri = new Uri(configuration.GetAppSetting("FoldingApiUri"), UriKind.Absolute);
-            var getDistroPath = new Uri("/v1/GetDistro/Next", UriKind.Relative);
-            var requestUri = new Uri(foldingApiUri, getDistroPath);
+            DistroResponse distroResponse = await CallApi<DistroResponse>("/v1/GetDistro/All");
 
-            var serializer = new DataContractJsonSerializer(typeof (DistroResponse));
-
-            using (var client = new HttpClient())
+            if (distroResponse == default)
             {
-                logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
-
-                HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
-
-                logger.LogInformation("Finished GET from URI");
-
-                string responseContent = await httpResponse.Content.ReadAsStringAsync();
-
-                if (!httpResponse.IsSuccessStatusCode)
-                {
-                    logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
-                        httpResponse.StatusCode, responseContent);
-                    return "The api is down :( try again later";
-                }
-
-                logger.LogTrace("responseContent: {responseContent}", responseContent);
-
-                using (var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent)))
-                {
-                    var distroResponse = serializer.ReadObject(streamReader) as DistroResponse;
-
-                    if (distroResponse is null || !distroResponse.Success)
-                    {
-                        return "The api is down :( try again later";
-                    }
-
-                    DistroUser distroUser =
-                        distroResponse.Distro.FirstOrDefault(user => user.BitcoinAddress == bitcoinAddress);
-
-                    if (distroUser is null)
-                    {
-                        return
-                            "We were unable to find your bitcoin address. Ensure the address is correct and try again.";
-                    }
-
-                    var stringBuilder = new StringBuilder();
-
-                    stringBuilder.AppendLine($"Results for: {distroUser.BitcoinAddress}");
-                    stringBuilder.AppendLine($"\tPoints gained: {distroUser.PointsGained}");
-                    stringBuilder.AppendLine($"\tWork units gained: {distroUser.WorkUnitsGained}");
-                    stringBuilder.AppendLine($"\tReceiving amount: {distroUser.Amount}");
-
-                    return stringBuilder.ToString();
-                }
+                return "The api is down :( try again later";
             }
+
+            DistroUser distroUser = distroResponse.Distro.FirstOrDefault(user => user.BitcoinAddress == bitcoinAddress);
+
+            if (distroUser is null)
+            {
+                return "We were unable to find your bitcoin address. Ensure the address is correct and try again.";
+            }
+
+            var stringBuilder = new StringBuilder();
+
+            stringBuilder.AppendLine($"Results for: {distroUser.BitcoinAddress}");
+            stringBuilder.AppendLine($"\tPoints gained: {distroUser.PointsGained}");
+            stringBuilder.AppendLine($"\tWork units gained: {distroUser.WorkUnitsGained}");
+            stringBuilder.AppendLine($"\tReceiving amount: {distroUser.Amount}");
+
+            return stringBuilder.ToString();
         }
 
         public string Help()
@@ -213,14 +139,51 @@
 
         public async Task<string> LookupUser(string searchCriteria)
         {
-            var foldingApiUri = new Uri(configuration.GetAppSetting("FoldingApiUri"), UriKind.Absolute);
-            var getMemberStatsPath = new Uri("/v1/GetMembers", UriKind.Relative);
-            var requestUri = new Uri(foldingApiUri, getMemberStatsPath);
+            MembersResponse membersResponse = await CallApi<MembersResponse>("/v1/GetMembers");
 
-            var serializer = new DataContractJsonSerializer(typeof (MembersResponse));
-
-            using (var client = new HttpClient())
+            if (membersResponse == default)
             {
+                return "The api is down :( try again later";
+            }
+
+            IEnumerable<Member> matchingMembers = membersResponse.Members.Where(member =>
+                member.UserName.StartsWith(searchCriteria,
+                    StringComparison
+                        .CurrentCultureIgnoreCase)
+                || member.UserName.EndsWith(searchCriteria,
+                    StringComparison
+                        .CurrentCultureIgnoreCase));
+
+            if (matchingMembers.IsNullOrEmpty())
+            {
+                return "No matches found. Ensure you are searching the start or ending of your username and try again.";
+            }
+
+            string response = $"Found the following matches:{Environment.NewLine}"
+                              + $"\t{string.Join($",{Environment.NewLine}\t", matchingMembers.Select(member => member.UserName).Distinct())}";
+
+            if (response.Length > 2000)
+            {
+                response = response.Substring(0, 2000 - 3);
+                response += "...";
+            }
+
+            return response;
+        }
+
+        private async Task<T> CallApi<T>(string relativePath, int retryAttempts = 3, int sleepInSeconds = 300)
+            where T : BaseResponse
+        {
+            try
+            {
+                var foldingApiUri = new Uri(configuration.GetAppSetting("FoldingApiUri"), UriKind.Absolute);
+                var getMemberStatsPath = new Uri(relativePath, UriKind.Relative);
+                var requestUri = new Uri(foldingApiUri, getMemberStatsPath);
+
+                var serializer = new DataContractJsonSerializer(typeof (T));
+
+                using var client = new HttpClient();
+
                 logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
 
                 HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
@@ -233,53 +196,52 @@
                 {
                     logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
                         httpResponse.StatusCode, responseContent);
-                    return "The api is down :( try again later";
+
+                    if (IsTimeout(httpResponse.StatusCode) && retryAttempts > 0)
+                    {
+                        await reply("The hamsters are slow today...please give us more time");
+                        logger.LogDebug("Going to attempt to download again after sleeping");
+                        Thread.Sleep(sleepInSeconds * 1000);
+                        return await CallApi<T>(relativePath, --retryAttempts);
+                    }
+
+                    return default;
                 }
 
                 logger.LogTrace("responseContent: {responseContent}", responseContent);
 
-                using (var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent)))
+                await using var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent));
+
+                var response = serializer.ReadObject(streamReader) as T;
+
+                if (response is null || !response.Success)
                 {
-                    var membersResponse = serializer.ReadObject(streamReader) as MembersResponse;
-
-                    if (membersResponse is null || !membersResponse.Success)
-                    {
-                        return "The api is down :( try again later";
-                    }
-
-                    IEnumerable<Member> matchingMembers = membersResponse.Members.Where(member =>
-                        member.UserName.StartsWith(searchCriteria,
-                            StringComparison
-                                .CurrentCultureIgnoreCase)
-                        || member.UserName.EndsWith(
-                            searchCriteria,
-                            StringComparison
-                                .CurrentCultureIgnoreCase));
-
-                    if (matchingMembers.IsNullOrEmpty())
-                    {
-                        return
-                            "No matches found. Ensure you are searching the start or ending of your username and try again.";
-                    }
-
-                    string response = $"Found the following matches:{Environment.NewLine}"
-                                      + $"\t{string.Join($",{Environment.NewLine}\t", matchingMembers.Select(member => member.UserName).Distinct())}";
-
-                    if (response.Length > 2000)
-                    {
-                        response = response.Substring(0, 2000 - 3);
-                        response += "...";
-                    }
-
-                    return response;
+                    return default;
                 }
+
+                return response;
+            }
+            catch (TaskCanceledException exception)
+            {
+                if (retryAttempts > 0)
+                {
+                    await reply("The hamsters are slow today...please give us more time");
+                    logger.LogDebug(exception,"Going to attempt to download again after sleeping");
+                    Thread.Sleep(sleepInSeconds * 1000);
+                    return await CallApi<T>(relativePath, --retryAttempts);
+                }
+
+                await reply("The api is down :( try again later");
+                logger.LogError(exception, "There was an unhandled exception");
+                throw;
             }
         }
 
         private IEnumerable<CommandInfo> GetCommands()
         {
             List<CommandInfo> commands = commandService.GetCommands().ToList();
-            commands.Sort((command1, command2) => string.Compare(command1.Name, command2.Name, StringComparison.CurrentCulture));
+            commands.Sort((command1, command2) =>
+                string.Compare(command1.Name, command2.Name, StringComparison.CurrentCulture));
             return commands;
         }
 
@@ -293,6 +255,12 @@
             }
 
             return distributionDate;
+        }
+
+        private bool IsTimeout(HttpStatusCode statusCode)
+        {
+            return statusCode == HttpStatusCode.BadGateway || statusCode == HttpStatusCode.GatewayTimeout
+                                                           || statusCode == HttpStatusCode.RequestTimeout;
         }
     }
 }
