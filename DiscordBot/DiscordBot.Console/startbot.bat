@@ -1,0 +1,2 @@
+SET DOTNET_ENVIRONMENT=production
+DiscordBot.Console.exe
