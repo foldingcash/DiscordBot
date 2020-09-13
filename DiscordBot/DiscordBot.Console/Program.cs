@@ -16,7 +16,7 @@
 
         private static IHostBuilder CreateHostBuilder(string[] args)
         {
-            return Host.CreateDefaultBuilder(args).ConfigureServices(services =>
+            return Host.CreateDefaultBuilder(args).UseWindowsService().ConfigureServices(services =>
             {
                 services.AddLogging();
 
