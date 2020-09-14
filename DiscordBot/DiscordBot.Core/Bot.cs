@@ -98,7 +98,12 @@
                     await LogResult(commandContext, defaultResponseResult);
                 }
 
-                return;
+                argumentPosition = 0;
+                if (!message.HasCharPrefix('!', ref argumentPosition))
+                {
+                    // Not going to respond
+                    return;
+                }
             }
 
             IResult result = await commandService.ExecuteAsync(commandContext, argumentPosition);

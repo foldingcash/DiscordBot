@@ -108,7 +108,7 @@
         public async Task TestAdmin()
         {
             logger.LogDebug("Testing an admin call");
-            await Reply("Admin test finished");
+            await Reply("ACK");
         }
 
         [Development]
