@@ -16,14 +16,18 @@
 
         private static IHostBuilder CreateHostBuilder(string[] args)
         {
-            return Host.CreateDefaultBuilder(args).UseWindowsService().ConfigureServices(services =>
+            return Host.CreateDefaultBuilder(args).UseWindowsService().ConfigureServices((context, services) =>
             {
                 services.AddLogging();
 
                 services.AddHostedService<Bot>();
-
                 services.AddSingleton<ICommandService, CommandProvider>();
+
+                services.Configure<BotConfig>(context.Configuration.GetSection("AppSettings"));
+
                 services.AddSingleton<IDiscordBotModuleService, FoldingBotModuleProvider>();
+
+                services.Configure<FoldingBotConfig>(context.Configuration.GetSection("AppSettings"));
             });
         }
     }

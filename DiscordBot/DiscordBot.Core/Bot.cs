@@ -11,15 +11,15 @@
 
     using DiscordBot.Core.Interfaces;
 
-    using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
 
     public class Bot : IHostedService
     {
-        private readonly ICommandService commandService;
+        private readonly IOptionsMonitor<BotConfig> botConfigMonitor;
 
-        private readonly IConfiguration configuration;
+        private readonly ICommandService commandService;
 
         private readonly IHostEnvironment environment;
 
@@ -27,14 +27,16 @@
 
         private DiscordSocketClient client;
 
-        public Bot(IConfiguration configuration, ICommandService commandService, ILogger<Bot> logger,
-                   IHostEnvironment environment)
+        public Bot(ICommandService commandService, ILogger<Bot> logger, IHostEnvironment environment,
+                   IOptionsMonitor<BotConfig> botConfigMonitor)
         {
-            this.configuration = configuration;
             this.commandService = commandService;
             this.logger = logger;
             this.environment = environment;
+            this.botConfigMonitor = botConfigMonitor;
         }
+
+        private BotConfig botConfig => botConfigMonitor?.CurrentValue ?? new BotConfig();
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
@@ -65,7 +67,7 @@
 
         private string GetToken()
         {
-            return configuration.GetSection("AppSettings")["Token"];
+            return botConfig.Token;
         }
 
         private async Task HandleMessageReceived(SocketMessage rawMessage)
@@ -93,7 +95,7 @@
                 {
                     IResult defaultResponseResult =
                         await commandService.ExecuteDefaultResponse(commandContext, argumentPosition);
-                    await LogErrorResult(commandContext, defaultResponseResult);
+                    await LogResult(commandContext, defaultResponseResult);
                 }
 
                 return;
@@ -101,7 +103,7 @@
 
             IResult result = await commandService.ExecuteAsync(commandContext, argumentPosition);
 
-            await LogErrorResult(commandContext, result);
+            await LogResult(commandContext, result);
         }
 
         private void LogEnvironment()
@@ -110,7 +112,7 @@
                 Process.GetCurrentProcess().Id);
         }
 
-        private async Task LogErrorResult(SocketCommandContext commandContext, IResult result)
+        private async Task LogResult(SocketCommandContext commandContext, IResult result)
         {
             if (result.Error.HasValue && result.Error.Value != CommandError.UnknownCommand)
             {

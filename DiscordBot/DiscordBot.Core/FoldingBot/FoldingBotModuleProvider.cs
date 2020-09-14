@@ -16,30 +16,31 @@
     using Discord.Commands;
 
     using DiscordBot.Core.Attributes;
-    using DiscordBot.Core.Extensions;
     using DiscordBot.Core.Interfaces;
     using DiscordBot.Core.Models;
 
-    using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
 
     public class FoldingBotModuleProvider : IDiscordBotModuleService
     {
         private readonly ICommandService commandService;
 
-        private readonly IConfiguration configuration;
+        private readonly IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor;
 
         private readonly ILogger<FoldingBotModuleProvider> logger;
 
         private Func<string, Task> reply = message => Task.CompletedTask;
 
-        public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger, IConfiguration configuration,
-                                        ICommandService commandService)
+        public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger, ICommandService commandService,
+                                        IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor)
         {
             this.logger = logger;
-            this.configuration = configuration;
             this.commandService = commandService;
+            this.foldingBotConfigMonitor = foldingBotConfigMonitor;
         }
+
+        private FoldingBotConfig foldingBotConfig => foldingBotConfigMonitor?.CurrentValue ?? new FoldingBotConfig();
 
         public Func<string, Task> Reply
         {
@@ -48,12 +49,12 @@
 
         public string GetFoldingAtHomeUrl()
         {
-            return $"Visit {configuration.GetAppSetting("FoldingAtHomeUrl")} to download folding@home";
+            return $"Visit {foldingBotConfig.FoldingAtHomeUrl} to download folding@home";
         }
 
         public string GetHomeUrl()
         {
-            return $"Visit {configuration.GetAppSetting("HomeUrl")} to learn more about this project";
+            return $"Visit {foldingBotConfig.HomeUrl} to learn more about this project";
         }
 
         public string GetNextDistributionDate()
@@ -114,7 +115,7 @@
             builder.AppendLine(
                 "Are you trying to use me? Tag me, tell me a command, and provide additional information when needed.");
             builder.AppendLine();
-            builder.Append($"Usage: @{configuration.GetAppSetting("BotName")} ");
+            builder.Append($"Usage: @{foldingBotConfig.BotName} ");
             builder.AppendLine("{command} {data}");
             builder.AppendLine();
             builder.AppendLine("Commands -");
@@ -176,7 +177,7 @@
         {
             try
             {
-                var foldingApiUri = new Uri(configuration.GetAppSetting("FoldingApiUri"), UriKind.Absolute);
+                var foldingApiUri = new Uri(foldingBotConfig.FoldingApiUri, UriKind.Absolute);
                 var getMemberStatsPath = new Uri(relativePath, UriKind.Relative);
                 var requestUri = new Uri(foldingApiUri, getMemberStatsPath);
 
@@ -226,7 +227,7 @@
                 if (retryAttempts > 0)
                 {
                     await reply("The hamsters are slow today...please give us more time");
-                    logger.LogDebug(exception,"Going to attempt to download again after sleeping");
+                    logger.LogDebug(exception, "Going to attempt to download again after sleeping");
                     Thread.Sleep(sleepInSeconds * 1000);
                     return await CallApi<T>(relativePath, --retryAttempts);
                 }
