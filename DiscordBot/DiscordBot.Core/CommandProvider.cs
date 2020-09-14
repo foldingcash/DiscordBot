@@ -43,8 +43,7 @@
 
         public async Task<IResult> ExecuteAsync(SocketCommandContext commandContext, int argumentPosition)
         {
-            if (commandContext.Channel.Name != GetBotChannel()
-                && commandContext.User.Username == foldingBotConfig.AdminUser)
+            if (!commandContext.IsPrivate && commandContext.Channel.Name != GetBotChannel())
             {
                 return ExecuteResult.FromSuccess();
             }
@@ -70,7 +69,7 @@
 
         public async Task<IResult> ExecuteDefaultResponse(SocketCommandContext commandContext, int argumentPosition)
         {
-            if (commandContext.Channel.Name != GetBotChannel())
+            if (!commandContext.IsPrivate && commandContext.Channel.Name != GetBotChannel())
             {
                 return ExecuteResult.FromSuccess();
             }
