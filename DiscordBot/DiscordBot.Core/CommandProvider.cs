@@ -59,7 +59,16 @@
                 command.Command.Attributes.Any(attribute =>
                     attribute is DevelopmentAttribute));
 
-            if (!IsDevelopmentEnvironment() && matchIsDevCommand)
+            if (matchIsDevCommand && !IsDevelopmentEnvironment())
+            {
+                return ExecuteResult.FromSuccess();
+            }
+
+            bool matchIsAdminCommand = searchResult.Commands.Any(command =>
+                command.Command.Attributes.Any(attribute =>
+                    attribute is AdminOnlyAttribute));
+
+            if (matchIsAdminCommand && !IsAdminRequesting(commandContext))
             {
                 return ExecuteResult.FromSuccess();
             }
@@ -107,6 +116,12 @@
         private string GetBotChannel()
         {
             return foldingBotConfig.BotChannel;
+        }
+
+        private bool IsAdminRequesting(SocketCommandContext commandContext)
+        {
+            return string.Equals(foldingBotConfig.AdminUser, commandContext.Message.Author.Username,
+                StringComparison.OrdinalIgnoreCase);
         }
 
         private bool IsDevelopmentEnvironment()

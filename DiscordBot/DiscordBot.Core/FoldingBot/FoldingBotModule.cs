@@ -101,6 +101,16 @@
             await Reply(service.Help());
         }
 
+        [AdminOnly]
+        [Development]
+        [Command("test admin")]
+        [Summary("Tests an admin only call")]
+        public async Task TestAdmin()
+        {
+            logger.LogDebug("Testing an admin call");
+            await Reply("Admin test finished");
+        }
+
         [Development]
         [Command("test async", RunMode = RunMode.Async)]
         [Usage("{timeout in seconds defaults to 60 secs}")]
