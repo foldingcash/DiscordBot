@@ -1,5 +1,7 @@
-Stop-Service -Name "FoldingCashDiscordBot"
+$Name = "FoldingCashDiscordBot"
 
-Remove-Service -Name "FoldingCashDiscordBot"
+Stop-Service -Name $Name
 
-sc.exe delete "FoldingCashDiscordBot"
+Remove-Service -Name $Name
+
+sc.exe delete $Name
