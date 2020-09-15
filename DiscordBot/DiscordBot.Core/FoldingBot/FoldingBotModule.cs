@@ -51,7 +51,8 @@
 
         [AdminOnly]
         [Hidden]
-        [Command("disable command", true)]
+        [Command("disable command")]
+        [Alias("dc")]
         [Usage("{command name}")]
         [Summary("Disables a specified command")]
         public async Task DisableCommand([Remainder] string commandName)
@@ -78,9 +79,10 @@
         [AdminOnly]
         [Hidden]
         [Command("enable command")]
+        [Alias("ec")]
         [Usage("{command name}")]
         [Summary("Enables a specified command")]
-        public async Task EnableCommand(string commandName)
+        public async Task EnableCommand([Remainder] string commandName)
         {
             logger.LogDebug("Enabling a command...");
             DisabledCommands.Commands.Remove(commandName);
