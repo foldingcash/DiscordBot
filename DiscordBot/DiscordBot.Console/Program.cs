@@ -6,6 +6,7 @@
 
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
+    using Microsoft.Extensions.Logging;
 
     public class Program
     {
@@ -18,7 +19,13 @@
         {
             return Host.CreateDefaultBuilder(args).UseWindowsService().ConfigureServices((context, services) =>
             {
-                services.AddLogging();
+                services.AddLogging(builder =>
+                {
+                    builder.AddEventLog(settings =>
+                    {
+                        settings.SourceName = context.Configuration["Logging:EventLog:SourceName"];
+                    });
+                });
 
                 services.AddHostedService<Bot>();
                 services.AddSingleton<ICommandService, CommandProvider>();
