@@ -38,7 +38,7 @@
 
         public Task AddModulesAsync()
         {
-            return innerService.AddModuleAsync<FoldingBotModule>(services);
+            return Task.WhenAll(innerService.AddModuleAsync<FoldingBotModule>(services));
         }
 
         public async Task<IResult> ExecuteAsync(SocketCommandContext commandContext, int argumentPosition)
@@ -110,7 +110,9 @@
                                                                !(attribute is DevelopmentAttribute)))
                                                        .Where(command =>
                                                            command.Attributes.All(attribute =>
-                                                               !(attribute is DeprecatedAttribute)));
+                                                               !(attribute is DeprecatedAttribute)))
+                                                       .Where(command =>
+                                                           !DisabledCommands.Commands.Contains(command.Name));
         }
 
         private string GetBotChannel()

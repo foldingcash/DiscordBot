@@ -1,6 +1,7 @@
 ﻿namespace DiscordBot.Core.FoldingBot
 {
     using System;
+    using System.Linq;
     using System.Runtime.CompilerServices;
     using System.Threading.Tasks;
 
@@ -46,6 +47,44 @@
         public Task AcknowledgeGoodBot()
         {
             return Reply(":D");
+        }
+
+        [AdminOnly]
+        [Hidden]
+        [Command("disable command", true)]
+        [Usage("{command name}")]
+        [Summary("Disables a specified command")]
+        public async Task DisableCommand([Remainder] string commandName)
+        {
+            CommandAttribute command = GetCommandAttribute();
+            if (commandName == command.Text)
+            {
+                logger.LogWarning("Disabling this command is not recommended...");
+                return;
+            }
+
+            command = GetCommandAttribute(nameof(EnableCommand));
+            if (commandName == command.Text)
+            {
+                logger.LogWarning("Disabling this command is not recommended...");
+                return;
+            }
+
+            logger.LogDebug("Disabling a command...");
+            DisabledCommands.Commands.Add(commandName);
+            await Reply("Completed");
+        }
+
+        [AdminOnly]
+        [Hidden]
+        [Command("enable command")]
+        [Usage("{command name}")]
+        [Summary("Enables a specified command")]
+        public async Task EnableCommand(string commandName)
+        {
+            logger.LogDebug("Enabling a command...");
+            DisabledCommands.Commands.Remove(commandName);
+            await Reply("Completed");
         }
 
         [Command("fah")]
@@ -125,6 +164,12 @@
             });
         }
 
+        private CommandAttribute GetCommandAttribute([CallerMemberName] string methodName = "")
+        {
+            return GetType().GetMethod(methodName)?.GetCustomAttributes(true).OfType<CommandAttribute>()
+                            .FirstOrDefault();
+        }
+
         private async Task Reply(string message, [CallerMemberName] string methodName = "")
         {
             await Reply(() => Task.FromResult(message), methodName);
@@ -132,6 +177,13 @@
 
         private async Task Reply(Func<Task<string>> getMessage, [CallerMemberName] string methodName = "")
         {
+            CommandAttribute commandAttribute = GetCommandAttribute(methodName);
+
+            if (DisabledCommands.Commands.Contains(commandAttribute.Text))
+            {
+                return;
+            }
+
             try
             {
                 logger.LogInformation("Method Invoked: {methodName}", methodName);
