@@ -8,16 +8,15 @@
     using Discord.Commands;
 
     using DiscordBot.Core.Attributes;
-    using DiscordBot.Core.Extensions;
     using DiscordBot.Core.FoldingBot;
     using DiscordBot.Core.Interfaces;
 
-    using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
 
     public class CommandProvider : ICommandService
     {
-        private readonly IConfiguration configuration;
+        private readonly IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor;
 
         private readonly CommandService innerService;
 
@@ -25,23 +24,26 @@
 
         private readonly IServiceProvider services;
 
-        public CommandProvider(ILogger<CommandProvider> logger, IServiceProvider services, IConfiguration configuration)
+        public CommandProvider(ILogger<CommandProvider> logger, IServiceProvider services,
+                               IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor)
         {
             innerService = new CommandService(new CommandServiceConfig());
 
             this.logger = logger;
             this.services = services;
-            this.configuration = configuration;
+            this.foldingBotConfigMonitor = foldingBotConfigMonitor;
         }
+
+        private FoldingBotConfig foldingBotConfig => foldingBotConfigMonitor?.CurrentValue ?? new FoldingBotConfig();
 
         public Task AddModulesAsync()
         {
-            return innerService.AddModuleAsync<FoldingBotModule>(services);
+            return Task.WhenAll(innerService.AddModuleAsync<FoldingBotModule>(services));
         }
 
         public async Task<IResult> ExecuteAsync(SocketCommandContext commandContext, int argumentPosition)
         {
-            if (commandContext.Channel.Name != GetBotChannel())
+            if (!commandContext.IsPrivate && commandContext.Channel.Name != GetBotChannel())
             {
                 return ExecuteResult.FromSuccess();
             }
@@ -57,7 +59,16 @@
                 command.Command.Attributes.Any(attribute =>
                     attribute is DevelopmentAttribute));
 
-            if (!IsDevelopmentEnvironment() && matchIsDevCommand)
+            if (matchIsDevCommand && !IsDevelopmentEnvironment())
+            {
+                return ExecuteResult.FromSuccess();
+            }
+
+            bool matchIsAdminCommand = searchResult.Commands.Any(command =>
+                command.Command.Attributes.Any(attribute =>
+                    attribute is AdminOnlyAttribute));
+
+            if (matchIsAdminCommand && !IsAdminRequesting(commandContext))
             {
                 return ExecuteResult.FromSuccess();
             }
@@ -67,7 +78,7 @@
 
         public async Task<IResult> ExecuteDefaultResponse(SocketCommandContext commandContext, int argumentPosition)
         {
-            if (commandContext.Channel.Name != GetBotChannel())
+            if (!commandContext.IsPrivate && commandContext.Channel.Name != GetBotChannel())
             {
                 return ExecuteResult.FromSuccess();
             }
@@ -99,20 +110,25 @@
                                                                !(attribute is DevelopmentAttribute)))
                                                        .Where(command =>
                                                            command.Attributes.All(attribute =>
-                                                               !(attribute is DeprecatedAttribute)));
+                                                               !(attribute is DeprecatedAttribute)))
+                                                       .Where(command =>
+                                                           !DisabledCommands.Commands.Contains(command.Name));
         }
 
         private string GetBotChannel()
         {
-            return configuration.GetAppSetting("BotChannel");
+            return foldingBotConfig.BotChannel;
+        }
+
+        private bool IsAdminRequesting(SocketCommandContext commandContext)
+        {
+            return string.Equals(foldingBotConfig.AdminUser, commandContext.Message.Author.Username,
+                StringComparison.OrdinalIgnoreCase);
         }
 
         private bool IsDevelopmentEnvironment()
         {
-            string rawValue = configuration.GetAppSetting("DevMode");
-            logger.LogDebug("Attempting to parse DevMode configuration value: {value}", rawValue);
-            bool parsed = bool.TryParse(rawValue, out bool devMode);
-            return parsed && devMode;
+            return foldingBotConfig.DevMode;
         }
     }
 }

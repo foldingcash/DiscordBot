@@ -1,6 +1,7 @@
 ﻿namespace DiscordBot.Core.FoldingBot
 {
     using System;
+    using System.Linq;
     using System.Runtime.CompilerServices;
     using System.Threading.Tasks;
 
@@ -48,6 +49,46 @@
             return Reply(":D");
         }
 
+        [AdminOnly]
+        [Hidden]
+        [Command("disable command")]
+        [Alias("dc")]
+        [Usage("{command name}")]
+        [Summary("Disables a specified command")]
+        public async Task DisableCommand([Remainder] string commandName)
+        {
+            CommandAttribute command = GetCommandAttribute();
+            if (commandName == command.Text)
+            {
+                logger.LogWarning("Disabling this command is not recommended...");
+                return;
+            }
+
+            command = GetCommandAttribute(nameof(EnableCommand));
+            if (commandName == command.Text)
+            {
+                logger.LogWarning("Disabling this command is not recommended...");
+                return;
+            }
+
+            logger.LogDebug("Disabling a command...");
+            DisabledCommands.Commands.Add(commandName);
+            await Reply("Completed");
+        }
+
+        [AdminOnly]
+        [Hidden]
+        [Command("enable command")]
+        [Alias("ec")]
+        [Usage("{command name}")]
+        [Summary("Enables a specified command")]
+        public async Task EnableCommand([Remainder] string commandName)
+        {
+            logger.LogDebug("Enabling a command...");
+            DisabledCommands.Commands.Remove(commandName);
+            await Reply("Completed");
+        }
+
         [Command("fah")]
         [Summary("Start folding today or update to the latest software")]
         public Task GetFoldingAtHomeUrl()
@@ -87,7 +128,7 @@
         [Command("lookup", RunMode = RunMode.Async)]
         [Usage("{search criteria}")]
         [Summary("Helps to find yourself, not case sensitive and searches the start and end for a match")]
-        public async Task LookupUser(string searchCriteria)
+        public async Task LookupUser([Remainder] string searchCriteria)
         {
             await ReplyAsyncMode(async () => await service.LookupUser(searchCriteria));
         }
@@ -99,6 +140,16 @@
         public async Task NoCommand()
         {
             await Reply(service.Help());
+        }
+
+        [AdminOnly]
+        [Development]
+        [Command("test admin")]
+        [Summary("Tests an admin only call")]
+        public async Task TestAdmin()
+        {
+            logger.LogDebug("Testing an admin call");
+            await Reply("ACK");
         }
 
         [Development]
@@ -115,6 +166,12 @@
             });
         }
 
+        private CommandAttribute GetCommandAttribute([CallerMemberName] string methodName = "")
+        {
+            return GetType().GetMethod(methodName)?.GetCustomAttributes(true).OfType<CommandAttribute>()
+                            .FirstOrDefault();
+        }
+
         private async Task Reply(string message, [CallerMemberName] string methodName = "")
         {
             await Reply(() => Task.FromResult(message), methodName);
@@ -122,6 +179,13 @@
 
         private async Task Reply(Func<Task<string>> getMessage, [CallerMemberName] string methodName = "")
         {
+            CommandAttribute commandAttribute = GetCommandAttribute(methodName);
+
+            if (DisabledCommands.Commands.Contains(commandAttribute.Text))
+            {
+                return;
+            }
+
             try
             {
                 logger.LogInformation("Method Invoked: {methodName}", methodName);
