@@ -1,5 +1,7 @@
 ﻿namespace DiscordBot.Console
 {
+    using System.Runtime.InteropServices;
+
     using DiscordBot.Core;
     using DiscordBot.Core.FoldingBot;
     using DiscordBot.Core.Interfaces;
@@ -21,10 +23,13 @@
             {
                 services.AddLogging(builder =>
                 {
-                    builder.AddEventLog(settings =>
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
-                        settings.SourceName = context.Configuration["Logging:EventLog:SourceName"];
-                    });
+                        builder.AddEventLog(settings =>
+                        {
+                            settings.SourceName = context.Configuration["Logging:EventLog:SourceName"];
+                        });
+                    }
                 });
 
                 services.AddHostedService<Bot>();
