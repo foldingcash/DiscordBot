@@ -51,6 +51,16 @@
 
         [AdminOnly]
         [Hidden]
+        [Command("announce")]
+        [Summary("Announces the next distribution")]
+        public async Task AnnounceUpcomingDistribution()
+        {
+            logger.LogDebug("Announcing the next distribution");
+            await Announce(service.GetDistributionAnnouncement());
+        }
+
+        [AdminOnly]
+        [Hidden]
         [Command("disable command")]
         [Alias("dc")]
         [Usage("{command name}")]
@@ -164,6 +174,11 @@
                 await Task.Delay(timeout * 1000);
                 return "Async test finished";
             });
+        }
+
+        private async Task Announce(string message, [CallerMemberName] string methodName = "")
+        {
+            await Task.Delay(0);
         }
 
         private CommandAttribute GetCommandAttribute([CallerMemberName] string methodName = "")

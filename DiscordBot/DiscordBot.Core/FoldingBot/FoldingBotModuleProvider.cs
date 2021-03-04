@@ -47,6 +47,12 @@
             set => reply = value;
         }
 
+        public string GetDistributionAnnouncement()
+        {
+            DateTime distroDate = GetDistributionDate();
+            return $"Start folding now! The next distribution is {distroDate.ToShortDateString()}.";
+        }
+
         public string GetFoldingAtHomeUrl()
         {
             return $"Visit {foldingBotConfig.FoldingAtHomeUrl} to download folding@home";
@@ -82,7 +88,7 @@
 
         public async Task<string> GetUserStats(string bitcoinAddress)
         {
-            DistroResponse distroResponse = await CallApi<DistroResponse>("/v1/GetDistro/All");
+            var distroResponse = await CallApi<DistroResponse>("/v1/GetDistro/All");
 
             if (distroResponse == default)
             {
@@ -140,7 +146,7 @@
 
         public async Task<string> LookupUser(string searchCriteria)
         {
-            MembersResponse membersResponse = await CallApi<MembersResponse>("/v1/GetMembers");
+            var membersResponse = await CallApi<MembersResponse>("/v1/GetMembers");
 
             if (membersResponse == default)
             {
@@ -148,12 +154,8 @@
             }
 
             IEnumerable<Member> matchingMembers = membersResponse.Members.Where(member =>
-                member.UserName.StartsWith(searchCriteria,
-                    StringComparison
-                        .CurrentCultureIgnoreCase)
-                || member.UserName.EndsWith(searchCriteria,
-                    StringComparison
-                        .CurrentCultureIgnoreCase));
+                member.UserName.StartsWith(searchCriteria, StringComparison.CurrentCultureIgnoreCase)
+                || member.UserName.EndsWith(searchCriteria, StringComparison.CurrentCultureIgnoreCase));
 
             if (matchingMembers.IsNullOrEmpty())
             {
@@ -244,6 +246,29 @@
             commands.Sort((command1, command2) =>
                 string.Compare(command1.Name, command2.Name, StringComparison.CurrentCulture));
             return commands;
+        }
+
+        private DateTime GetDistributionDate()
+        {
+            DateTime now = DateTime.Now;
+            DateTime distributionDate = GetDistributionDate(now.Year, now.Month);
+            DateTime endDistributionDate = distributionDate.AddDays(1).AddMinutes(-1);
+
+            if (now < distributionDate)
+            {
+                // do nothing
+            }
+            else if (now >= distributionDate && now <= endDistributionDate)
+            {
+                // do nothing
+            }
+            else
+            {
+                DateTime nextMonth = now.AddMonths(1);
+                distributionDate = GetDistributionDate(nextMonth.Year, nextMonth.Month);
+            }
+
+            return distributionDate;
         }
 
         private DateTime GetDistributionDate(int year, int month)

@@ -18,5 +18,7 @@
         string Help();
 
         Task<string> LookupUser(string searchCriteria);
+
+        string GetDistributionAnnouncement();
     }
 }
