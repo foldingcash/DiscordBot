@@ -1,14 +1,11 @@
 ﻿namespace DiscordBot.Console
 {
-    using System.Runtime.InteropServices;
-
     using DiscordBot.Core;
     using DiscordBot.Core.FoldingBot;
     using DiscordBot.Core.Interfaces;
 
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
-    using Microsoft.Extensions.Logging;
 
     public class Program
     {
@@ -21,17 +18,6 @@
         {
             return Host.CreateDefaultBuilder(args).UseWindowsService().ConfigureServices((context, services) =>
             {
-                services.AddLogging(builder =>
-                {
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    {
-                        builder.AddEventLog(settings =>
-                        {
-                            settings.SourceName = context.Configuration["Logging:EventLog:SourceName"];
-                        });
-                    }
-                });
-
                 services.AddHostedService<Bot>();
                 services.AddSingleton<ICommandService, CommandProvider>();
 
