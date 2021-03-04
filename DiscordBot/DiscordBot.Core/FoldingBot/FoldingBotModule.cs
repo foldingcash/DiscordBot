@@ -72,7 +72,7 @@
             }
 
             logger.LogDebug("Disabling a command...");
-            DisabledCommands.Commands.Add(commandName);
+            RuntimeChanges.DisabledCommands.Add(commandName);
             await Reply("Completed");
         }
 
@@ -85,7 +85,7 @@
         public async Task EnableCommand([Remainder] string commandName)
         {
             logger.LogDebug("Enabling a command...");
-            DisabledCommands.Commands.Remove(commandName);
+            RuntimeChanges.DisabledCommands.Remove(commandName);
             await Reply("Completed");
         }
 
@@ -181,7 +181,7 @@
         {
             CommandAttribute commandAttribute = GetCommandAttribute(methodName);
 
-            if (DisabledCommands.Commands.Contains(commandAttribute.Text))
+            if (RuntimeChanges.DisabledCommands.Contains(commandAttribute.Text))
             {
                 return;
             }

@@ -112,7 +112,7 @@
                                                            command.Attributes.All(attribute =>
                                                                !(attribute is DeprecatedAttribute)))
                                                        .Where(command =>
-                                                           !DisabledCommands.Commands.Contains(command.Name));
+                                                           !RuntimeChanges.DisabledCommands.Contains(command.Name));
         }
 
         private string GetBotChannel()
