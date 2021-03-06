@@ -121,8 +121,8 @@
             builder.AppendLine(
                 "To use me, tag me or tell me a command and provide additional information when needed.");
             builder.AppendLine();
-            builder.Append($"Usage: @{config.BotName} ");
-            builder.AppendLine("{command} {data}");
+            builder.AppendLine("Usage: !{command} {data}");
+            builder.AppendLine($"Usage: @{config.BotName} {{command}} {{data}}");
             builder.AppendLine();
             builder.AppendLine("Commands -");
 
