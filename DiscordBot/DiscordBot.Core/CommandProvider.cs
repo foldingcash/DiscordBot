@@ -47,7 +47,8 @@
                 await innerService.AddModuleAsync<TestingBotModule>(services);
             }
 
-            await Task.WhenAll(innerService.AddModuleAsync<FoldingBotModule>(services));
+            await Task.WhenAll(innerService.AddModuleAsync<FoldingBotModule>(services),
+                innerService.AddModuleAsync<BaseModule>(services));
         }
 
         public async Task<IResult> ExecuteAsync(SocketCommandContext commandContext, int argumentPosition)

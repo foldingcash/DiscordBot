@@ -135,28 +135,12 @@
             await ReplyAsyncMode(async () => await service.GetUserStats(bitcoinAddress));
         }
 
-        [Command("help")]
-        [Summary("Show the list of available commands")]
-        public async Task Help()
-        {
-            await Reply(service.Help());
-        }
-
         [Command("lookup", RunMode = RunMode.Async)]
         [Usage("{search criteria}")]
         [Summary("Helps to find yourself, not case sensitive and searches the start and end for a match")]
         public async Task LookupUser([Remainder] string searchCriteria)
         {
             await ReplyAsyncMode(async () => await service.LookupUser(searchCriteria));
-        }
-
-        [Default]
-        [Hidden]
-        [Command("{default}")]
-        [Summary("Show the list of available commands")]
-        public async Task NoCommand()
-        {
-            await Reply(service.Help());
         }
     }
 }

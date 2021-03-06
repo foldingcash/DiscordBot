@@ -13,9 +13,6 @@
 
     using Castle.Core.Internal;
 
-    using Discord.Commands;
-
-    using DiscordBot.Core.Attributes;
     using DiscordBot.Core.FoldingBot.Models;
 
     using Microsoft.Extensions.Logging;
@@ -23,19 +20,16 @@
 
     public class FoldingBotModuleProvider : IFoldingBotModuleService
     {
-        private readonly ICommandService commandService;
-
         private readonly IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor;
 
         private readonly ILogger<FoldingBotModuleProvider> logger;
 
         private Func<string, Task> reply = message => Task.CompletedTask;
 
-        public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger, ICommandService commandService,
+        public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger,
                                         IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor)
         {
             this.logger = logger;
-            this.commandService = commandService;
             this.foldingBotConfigMonitor = foldingBotConfigMonitor;
         }
 
@@ -120,38 +114,6 @@
             stringBuilder.AppendLine($"\tReceiving amount: {distroUser.Amount}");
 
             return stringBuilder.ToString();
-        }
-
-        public string Help()
-        {
-            IEnumerable<CommandInfo> commandList = GetCommands();
-
-            var builder = new StringBuilder();
-
-            builder.AppendLine(
-                "Are you trying to use me? Tag me, tell me a command, and provide additional information when needed.");
-            builder.AppendLine();
-            builder.Append($"Usage: @{foldingBotConfig.BotName} ");
-            builder.AppendLine("{command} {data}");
-            builder.AppendLine();
-            builder.AppendLine("Commands -");
-
-            foreach (CommandInfo command in commandList)
-            {
-                var usageAttribute =
-                    command.Attributes.FirstOrDefault(attribute => attribute is UsageAttribute) as UsageAttribute;
-
-                if (usageAttribute is default(UsageAttribute))
-                {
-                    builder.AppendLine($"\t{command.Name} - {command.Summary}");
-                }
-                else
-                {
-                    builder.AppendLine($"\t{command.Name} {usageAttribute.Usage} - {command.Summary}");
-                }
-            }
-
-            return builder.ToString();
         }
 
         public async Task<string> LookupUser(string searchCriteria)
@@ -248,14 +210,6 @@
                 logger.LogError(exception, "There was an unhandled exception");
                 throw;
             }
-        }
-
-        private IEnumerable<CommandInfo> GetCommands()
-        {
-            List<CommandInfo> commands = commandService.GetCommands().ToList();
-            commands.Sort((command1, command2) =>
-                string.Compare(command1.Name, command2.Name, StringComparison.CurrentCulture));
-            return commands;
         }
 
         private DateTime GetDistributionDate()
