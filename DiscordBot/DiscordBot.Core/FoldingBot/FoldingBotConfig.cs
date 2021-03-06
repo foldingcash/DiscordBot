@@ -10,8 +10,6 @@
 
         public string BotName { get; set; }
 
-        public bool DevMode { get; set; }
-
         public string FoldingApiUri { get; set; }
 
         public string FoldingAtHomeUrl { get; set; }

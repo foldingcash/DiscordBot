@@ -68,7 +68,7 @@
             bool matchIsDevCommand = searchResult.Commands.Any(command =>
                 command.Command.Attributes.Any(attribute => attribute is DevelopmentAttribute));
 
-            if (matchIsDevCommand && !IsDevelopmentEnvironment())
+            if (matchIsDevCommand && !environment.IsDevelopment())
             {
                 return ExecuteResult.FromSuccess();
             }
@@ -105,7 +105,7 @@
 
         public IEnumerable<CommandInfo> GetCommands()
         {
-            bool isDevMode = IsDevelopmentEnvironment();
+            bool isDevMode = environment.IsDevelopment();
 
             return isDevMode ? innerService.Commands : innerService.Commands
                                                                    .Where(command =>
@@ -131,11 +131,6 @@
         {
             return string.Equals(foldingBotConfig.AdminUser, commandContext.Message.Author.Username,
                 StringComparison.OrdinalIgnoreCase);
-        }
-
-        private bool IsDevelopmentEnvironment()
-        {
-            return foldingBotConfig.DevMode;
         }
     }
 }
