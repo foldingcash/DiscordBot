@@ -1,17 +1,20 @@
 ﻿namespace DiscordBot.Core.FoldingBot
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Runtime.CompilerServices;
     using System.Threading.Tasks;
 
     using Discord;
     using Discord.Commands;
+    using Discord.WebSocket;
 
     using DiscordBot.Core.Attributes;
     using DiscordBot.Core.Interfaces;
 
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
 
     internal class FoldingBotModule : ModuleBase<SocketCommandContext>
     {
@@ -19,16 +22,20 @@
 
         private static bool isRunningAsyncMethod;
 
+        private readonly IOptions<FoldingBotConfig> config;
+
         private readonly Emoji hourglass = new Emoji("\u23F3");
 
         private readonly ILogger<FoldingBotModule> logger;
 
         private readonly IDiscordBotModuleService service;
 
-        public FoldingBotModule(IDiscordBotModuleService service, ILogger<FoldingBotModule> logger)
+        public FoldingBotModule(IDiscordBotModuleService service, ILogger<FoldingBotModule> logger,
+                                IOptions<FoldingBotConfig> config)
         {
             this.service = service;
             this.logger = logger;
+            this.config = config;
 
             service.Reply = message => Reply(message, nameof(IDiscordBotModuleService));
         }
@@ -176,9 +183,14 @@
             });
         }
 
-        private async Task Announce(string message, [CallerMemberName] string methodName = "")
+        private async Task Announce(string message)
         {
-            await Task.Delay(0);
+            IReadOnlyCollection<SocketGuild> guilds = Context.Client.Guilds;
+            SocketGuild guild = guilds.FirstOrDefault(g => g.Name == config.Value.Guild);
+            IReadOnlyCollection<SocketTextChannel> channels = guild?.TextChannels;
+            SocketTextChannel channel = channels?.FirstOrDefault(c => c.Name == config.Value.AnnounceChannel);
+
+            await (channel?.SendMessageAsync(message) ?? Task.CompletedTask);
         }
 
         private CommandAttribute GetCommandAttribute([CallerMemberName] string methodName = "")
