@@ -7,6 +7,10 @@
     {
         Func<string, Task> Reply { set; }
 
+        string ChangeDistroDate(DateTime date);
+
+        string GetDistributionAnnouncement();
+
         string GetFoldingAtHomeUrl();
 
         string GetHomeUrl();
@@ -18,7 +22,5 @@
         string Help();
 
         Task<string> LookupUser(string searchCriteria);
-
-        string GetDistributionAnnouncement();
     }
 }

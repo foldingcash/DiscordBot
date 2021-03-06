@@ -1,5 +1,6 @@
 ﻿namespace DiscordBot.Core.FoldingBot
 {
+    using System;
     using System.Threading.Tasks;
 
     using Discord.Commands;
@@ -55,6 +56,15 @@
         {
             logger.LogDebug("Announcing the next distribution");
             await Announce(service.GetDistributionAnnouncement(), config.Guild, config.AnnounceChannel);
+        }
+
+        [AdminOnly]
+        [Command("change distro")]
+        [Usage("{new date}")]
+        [Summary("Change the distro date to a new date")]
+        public Task ChangeDistroDate(DateTime date)
+        {
+            return Reply(service.ChangeDistroDate(date));
         }
 
         [AdminOnly]

@@ -47,6 +47,17 @@
             set => reply = value;
         }
 
+        public string ChangeDistroDate(DateTime date)
+        {
+            if (date.Date < DateTime.Now.Date)
+            {
+                return "The provided date is in the past, distro date was not updated.";
+            }
+
+            RuntimeChanges.DistroDateTime = date.Date;
+            return $"New distro date is {RuntimeChanges.DistroDateTime.Value.ToShortDateString()}";
+        }
+
         public string GetDistributionAnnouncement()
         {
             DateTime distroDate = GetDistributionDate();
@@ -66,7 +77,7 @@
         public string GetNextDistributionDate()
         {
             DateTime now = DateTime.Now;
-            DateTime distributionDate = GetDistributionDate(now.Year, now.Month);
+            DateTime distributionDate = GetDistributionDate();
             DateTime endDistributionDate = distributionDate.AddDays(1).AddMinutes(-1);
 
             if (now < distributionDate)
@@ -251,21 +262,19 @@
         private DateTime GetDistributionDate()
         {
             DateTime now = DateTime.Now;
-            DateTime distributionDate = GetDistributionDate(now.Year, now.Month);
+            DateTime defaultDistroDate = GetDistributionDate(now.Year, now.Month);
+            DateTime distributionDate = RuntimeChanges.DistroDateTime ?? defaultDistroDate;
             DateTime endDistributionDate = distributionDate.AddDays(1).AddMinutes(-1);
 
-            if (now < distributionDate)
-            {
-                // do nothing
-            }
-            else if (now >= distributionDate && now <= endDistributionDate)
-            {
-                // do nothing
-            }
-            else
+            if (now > endDistributionDate)
             {
                 DateTime nextMonth = now.AddMonths(1);
                 distributionDate = GetDistributionDate(nextMonth.Year, nextMonth.Month);
+
+                if (RuntimeChanges.DistroDateTime <= defaultDistroDate)
+                {
+                    RuntimeChanges.DistroDateTime = null;
+                }
             }
 
             return distributionDate;
