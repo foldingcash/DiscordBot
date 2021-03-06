@@ -9,7 +9,6 @@
 
     using DiscordBot.Core.Attributes;
     using DiscordBot.Core.FoldingBot;
-    using DiscordBot.Core.Interfaces;
     using DiscordBot.Core.TestingBot;
 
     using Microsoft.Extensions.Hosting;
