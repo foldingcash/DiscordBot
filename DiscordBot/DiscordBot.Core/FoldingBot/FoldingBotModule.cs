@@ -1,14 +1,8 @@
 ﻿namespace DiscordBot.Core.FoldingBot
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Runtime.CompilerServices;
     using System.Threading.Tasks;
 
-    using Discord;
     using Discord.Commands;
-    using Discord.WebSocket;
 
     using DiscordBot.Core.Attributes;
     using DiscordBot.Core.Interfaces;
@@ -16,29 +10,26 @@
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
 
-    internal class FoldingBotModule : ModuleBase<SocketCommandContext>
+    internal class FoldingBotModule : BotModule
     {
-        private static readonly object asyncLock = new object();
+        private readonly IOptionsMonitor<FoldingBotConfig> configMonitor;
 
-        private static bool isRunningAsyncMethod;
-
-        private readonly IOptions<FoldingBotConfig> config;
-
-        private readonly Emoji hourglass = new Emoji("\u23F3");
-
-        private readonly ILogger<FoldingBotModule> logger;
+        private readonly ILogger logger;
 
         private readonly IDiscordBotModuleService service;
 
         public FoldingBotModule(IDiscordBotModuleService service, ILogger<FoldingBotModule> logger,
-                                IOptions<FoldingBotConfig> config)
+                                IOptionsMonitor<FoldingBotConfig> configMonitor)
+            : base(logger)
         {
             this.service = service;
             this.logger = logger;
-            this.config = config;
+            this.configMonitor = configMonitor;
 
             service.Reply = message => Reply(message, nameof(IDiscordBotModuleService));
         }
+
+        private FoldingBotConfig config => configMonitor.CurrentValue;
 
         [Hidden]
         [Command("bad bot")]
@@ -63,7 +54,7 @@
         public async Task AnnounceUpcomingDistribution()
         {
             logger.LogDebug("Announcing the next distribution");
-            await Announce(service.GetDistributionAnnouncement());
+            await Announce(service.GetDistributionAnnouncement(), config.Guild, config.AnnounceChannel);
         }
 
         [AdminOnly]
@@ -157,107 +148,6 @@
         public async Task NoCommand()
         {
             await Reply(service.Help());
-        }
-
-        [AdminOnly]
-        [Development]
-        [Command("test admin")]
-        [Summary("Tests an admin only call")]
-        public async Task TestAdmin()
-        {
-            logger.LogDebug("Testing an admin call");
-            await Reply("ACK");
-        }
-
-        [Development]
-        [Command("test async", RunMode = RunMode.Async)]
-        [Usage("{timeout in seconds defaults to 60 secs}")]
-        [Summary("Test long running async methods")]
-        public async Task TestAsync(int timeout = 60)
-        {
-            logger.LogDebug("Testing async with timeout {timeout}", timeout);
-            await ReplyAsyncMode(async () =>
-            {
-                await Task.Delay(timeout * 1000);
-                return "Async test finished";
-            });
-        }
-
-        private async Task Announce(string message)
-        {
-            IReadOnlyCollection<SocketGuild> guilds = Context.Client.Guilds;
-            SocketGuild guild = guilds.FirstOrDefault(g => g.Name == config.Value.Guild);
-            IReadOnlyCollection<SocketTextChannel> channels = guild?.TextChannels;
-            SocketTextChannel channel = channels?.FirstOrDefault(c => c.Name == config.Value.AnnounceChannel);
-
-            await (channel?.SendMessageAsync(message) ?? Task.CompletedTask);
-        }
-
-        private CommandAttribute GetCommandAttribute([CallerMemberName] string methodName = "")
-        {
-            return GetType().GetMethod(methodName)?.GetCustomAttributes(true).OfType<CommandAttribute>()
-                            .FirstOrDefault();
-        }
-
-        private async Task Reply(string message, [CallerMemberName] string methodName = "")
-        {
-            await Reply(() => Task.FromResult(message), methodName);
-        }
-
-        private async Task Reply(Func<Task<string>> getMessage, [CallerMemberName] string methodName = "")
-        {
-            CommandAttribute commandAttribute = GetCommandAttribute(methodName);
-
-            if (RuntimeChanges.DisabledCommands.Contains(commandAttribute.Text))
-            {
-                return;
-            }
-
-            try
-            {
-                logger.LogInformation("Method Invoked: {methodName}", methodName);
-
-                await Context.Message.AddReactionAsync(hourglass);
-
-                await ReplyAsync(await getMessage.Invoke());
-
-                await Context.Message.RemoveReactionAsync(hourglass, Context.Client.CurrentUser,
-                    RequestOptions.Default);
-
-                logger.LogInformation("Method Finished: {methodName}", methodName);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "There was an unhandled exception");
-            }
-        }
-
-        private async Task ReplyAsyncMode(Func<Task<string>> getMessage, [CallerMemberName] string methodName = "")
-        {
-            var runAsync = true;
-
-            lock (asyncLock)
-            {
-                if (isRunningAsyncMethod)
-                {
-                    runAsync = false;
-                }
-                else
-                {
-                    isRunningAsyncMethod = true;
-                }
-            }
-
-            if (runAsync)
-            {
-                await Reply(getMessage, methodName);
-
-                isRunningAsyncMethod = false;
-            }
-            else
-            {
-                await Reply("Wait until the bot has finished responding to another user's long running request.");
-            }
         }
     }
 }

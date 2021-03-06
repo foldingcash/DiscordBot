@@ -10,35 +10,45 @@
     using DiscordBot.Core.Attributes;
     using DiscordBot.Core.FoldingBot;
     using DiscordBot.Core.Interfaces;
+    using DiscordBot.Core.TestingBot;
 
+    using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
 
     public class CommandProvider : ICommandService
     {
+        private readonly IHostEnvironment environment;
+
         private readonly IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor;
 
         private readonly CommandService innerService;
 
-        private readonly ILogger<CommandProvider> logger;
+        private readonly ILogger logger;
 
         private readonly IServiceProvider services;
 
         public CommandProvider(ILogger<CommandProvider> logger, IServiceProvider services,
-                               IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor)
+                               IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor, IHostEnvironment environment)
         {
             innerService = new CommandService(new CommandServiceConfig());
 
             this.logger = logger;
             this.services = services;
             this.foldingBotConfigMonitor = foldingBotConfigMonitor;
+            this.environment = environment;
         }
 
         private FoldingBotConfig foldingBotConfig => foldingBotConfigMonitor?.CurrentValue ?? new FoldingBotConfig();
 
-        public Task AddModulesAsync()
+        public async Task AddModulesAsync()
         {
-            return Task.WhenAll(innerService.AddModuleAsync<FoldingBotModule>(services));
+            if (environment.IsDevelopment())
+            {
+                await innerService.AddModuleAsync<TestingBotModule>(services);
+            }
+
+            await Task.WhenAll(innerService.AddModuleAsync<FoldingBotModule>(services));
         }
 
         public async Task<IResult> ExecuteAsync(SocketCommandContext commandContext, int argumentPosition)
@@ -56,8 +66,7 @@
             }
 
             bool matchIsDevCommand = searchResult.Commands.Any(command =>
-                command.Command.Attributes.Any(attribute =>
-                    attribute is DevelopmentAttribute));
+                command.Command.Attributes.Any(attribute => attribute is DevelopmentAttribute));
 
             if (matchIsDevCommand && !IsDevelopmentEnvironment())
             {
@@ -65,8 +74,7 @@
             }
 
             bool matchIsAdminCommand = searchResult.Commands.Any(command =>
-                command.Command.Attributes.Any(attribute =>
-                    attribute is AdminOnlyAttribute));
+                command.Command.Attributes.Any(attribute => attribute is AdminOnlyAttribute));
 
             if (matchIsAdminCommand && !IsAdminRequesting(commandContext))
             {
@@ -84,8 +92,7 @@
             }
 
             CommandInfo defaultCommand = innerService.Commands.FirstOrDefault(command =>
-                command.Attributes.Any(attribute =>
-                    attribute is DefaultAttribute));
+                command.Attributes.Any(attribute => attribute is DefaultAttribute));
 
             if (defaultCommand is default(CommandInfo))
             {
@@ -100,19 +107,19 @@
         {
             bool isDevMode = IsDevelopmentEnvironment();
 
-            return isDevMode ? innerService.Commands : innerService
-                                                       .Commands
-                                                       .Where(command =>
-                                                           command.Attributes.All(attribute =>
-                                                               !(attribute is HiddenAttribute)))
-                                                       .Where(command =>
-                                                           command.Attributes.All(attribute =>
-                                                               !(attribute is DevelopmentAttribute)))
-                                                       .Where(command =>
-                                                           command.Attributes.All(attribute =>
-                                                               !(attribute is DeprecatedAttribute)))
-                                                       .Where(command =>
-                                                           !RuntimeChanges.DisabledCommands.Contains(command.Name));
+            return isDevMode ? innerService.Commands : innerService.Commands
+                                                                   .Where(command =>
+                                                                       command.Attributes.All(attribute =>
+                                                                           !(attribute is HiddenAttribute)))
+                                                                   .Where(command =>
+                                                                       command.Attributes.All(attribute =>
+                                                                           !(attribute is DevelopmentAttribute)))
+                                                                   .Where(command =>
+                                                                       command.Attributes.All(attribute =>
+                                                                           !(attribute is DeprecatedAttribute)))
+                                                                   .Where(command =>
+                                                                       !RuntimeChanges.DisabledCommands.Contains(
+                                                                           command.Name));
         }
 
         private string GetBotChannel()
