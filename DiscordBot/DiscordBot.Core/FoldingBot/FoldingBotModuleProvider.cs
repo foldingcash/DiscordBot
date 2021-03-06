@@ -53,8 +53,8 @@
                 return "The provided date is in the past, distro date was not updated.";
             }
 
-            RuntimeChanges.DistroDateTime = date.Date;
-            return $"New distro date is {RuntimeChanges.DistroDateTime.Value.ToShortDateString()}";
+            FoldingBotRuntimeChanges.DistroDateTime = date.Date;
+            return $"New distro date is {FoldingBotRuntimeChanges.DistroDateTime.Value.ToShortDateString()}";
         }
 
         public string GetDistributionAnnouncement()
@@ -262,7 +262,7 @@
         {
             DateTime now = DateTime.Now;
             DateTime defaultDistroDate = GetDistributionDate(now.Year, now.Month);
-            DateTime distributionDate = RuntimeChanges.DistroDateTime ?? defaultDistroDate;
+            DateTime distributionDate = FoldingBotRuntimeChanges.DistroDateTime ?? defaultDistroDate;
             DateTime endDistributionDate = distributionDate.AddDays(1).AddMinutes(-1);
 
             if (now > endDistributionDate)
@@ -270,9 +270,9 @@
                 DateTime nextMonth = now.AddMonths(1);
                 distributionDate = GetDistributionDate(nextMonth.Year, nextMonth.Month);
 
-                if (RuntimeChanges.DistroDateTime <= defaultDistroDate)
+                if (FoldingBotRuntimeChanges.DistroDateTime <= defaultDistroDate)
                 {
-                    RuntimeChanges.DistroDateTime = null;
+                    FoldingBotRuntimeChanges.DistroDateTime = null;
                 }
             }
 
