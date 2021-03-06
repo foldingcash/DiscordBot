@@ -1,9 +1,9 @@
-﻿namespace DiscordBot.Core.Interfaces
+﻿namespace DiscordBot.Core.FoldingBot
 {
     using System;
     using System.Threading.Tasks;
 
-    public interface IDiscordBotModuleService
+    public interface IFoldingBotModuleService
     {
         Func<string, Task> Reply { set; }
 

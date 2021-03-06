@@ -23,7 +23,7 @@
 
                 services.Configure<BotConfig>(context.Configuration.GetSection("AppSettings"));
 
-                services.AddSingleton<IDiscordBotModuleService, FoldingBotModuleProvider>();
+                services.AddSingleton<IFoldingBotModuleService, FoldingBotModuleProvider>();
 
                 services.Configure<FoldingBotConfig>(context.Configuration.GetSection("AppSettings"));
             });

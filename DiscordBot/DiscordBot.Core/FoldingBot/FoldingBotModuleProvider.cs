@@ -16,13 +16,13 @@
     using Discord.Commands;
 
     using DiscordBot.Core.Attributes;
+    using DiscordBot.Core.FoldingBot.Models;
     using DiscordBot.Core.Interfaces;
-    using DiscordBot.Core.Models;
 
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
 
-    public class FoldingBotModuleProvider : IDiscordBotModuleService
+    public class FoldingBotModuleProvider : IFoldingBotModuleService
     {
         private readonly ICommandService commandService;
 

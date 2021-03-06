@@ -6,7 +6,6 @@
     using Discord.Commands;
 
     using DiscordBot.Core.Attributes;
-    using DiscordBot.Core.Interfaces;
 
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
@@ -17,9 +16,9 @@
 
         private readonly ILogger logger;
 
-        private readonly IDiscordBotModuleService service;
+        private readonly IFoldingBotModuleService service;
 
-        public FoldingBotModule(IDiscordBotModuleService service, ILogger<FoldingBotModule> logger,
+        public FoldingBotModule(IFoldingBotModuleService service, ILogger<FoldingBotModule> logger,
                                 IOptionsMonitor<FoldingBotConfig> configMonitor)
             : base(logger)
         {
@@ -27,7 +26,7 @@
             this.logger = logger;
             this.configMonitor = configMonitor;
 
-            service.Reply = message => Reply(message, nameof(IDiscordBotModuleService));
+            service.Reply = message => Reply(message, nameof(IFoldingBotModuleService));
         }
 
         private FoldingBotConfig config => configMonitor.CurrentValue;
