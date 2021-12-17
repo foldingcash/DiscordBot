@@ -1,4 +1,4 @@
-﻿namespace DiscordBot.Core.Models
+﻿namespace DiscordBot.Core.FoldingBot.Models
 {
     using System.Collections.Generic;
     using System.Runtime.Serialization;

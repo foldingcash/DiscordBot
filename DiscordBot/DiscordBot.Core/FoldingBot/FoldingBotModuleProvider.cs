@@ -13,30 +13,23 @@
 
     using Castle.Core.Internal;
 
-    using Discord.Commands;
-
-    using DiscordBot.Core.Attributes;
-    using DiscordBot.Core.Interfaces;
-    using DiscordBot.Core.Models;
+    using DiscordBot.Core.FoldingBot.Models;
 
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
 
-    public class FoldingBotModuleProvider : IDiscordBotModuleService
+    public class FoldingBotModuleProvider : IFoldingBotModuleService
     {
-        private readonly ICommandService commandService;
-
         private readonly IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor;
 
         private readonly ILogger<FoldingBotModuleProvider> logger;
 
         private Func<string, Task> reply = message => Task.CompletedTask;
 
-        public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger, ICommandService commandService,
+        public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger,
                                         IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor)
         {
             this.logger = logger;
-            this.commandService = commandService;
             this.foldingBotConfigMonitor = foldingBotConfigMonitor;
         }
 
@@ -45,6 +38,23 @@
         public Func<string, Task> Reply
         {
             set => reply = value;
+        }
+
+        public string ChangeDistroDate(DateTime date)
+        {
+            if (date.Date < DateTime.Now.Date)
+            {
+                return "The provided date is in the past, distro date was not updated.";
+            }
+
+            FoldingBotRuntimeChanges.DistroDateTime = date.Date;
+            return $"New distro date is {FoldingBotRuntimeChanges.DistroDateTime.Value.ToShortDateString()}";
+        }
+
+        public string GetDistributionAnnouncement()
+        {
+            DateTime distroDate = GetDistributionDate();
+            return $"Start folding now! The next distribution is {distroDate.ToShortDateString()}.";
         }
 
         public string GetFoldingAtHomeUrl()
@@ -60,7 +70,7 @@
         public string GetNextDistributionDate()
         {
             DateTime now = DateTime.Now;
-            DateTime distributionDate = GetDistributionDate(now.Year, now.Month);
+            DateTime distributionDate = GetDistributionDate();
             DateTime endDistributionDate = distributionDate.AddDays(1).AddMinutes(-1);
 
             if (now < distributionDate)
@@ -82,7 +92,7 @@
 
         public async Task<string> GetUserStats(string bitcoinAddress)
         {
-            DistroResponse distroResponse = await CallApi<DistroResponse>("/v1/GetDistro/All");
+            var distroResponse = await CallApi<DistroResponse>("/v1/GetDistro/All");
 
             if (distroResponse == default)
             {
@@ -106,41 +116,9 @@
             return stringBuilder.ToString();
         }
 
-        public string Help()
-        {
-            IEnumerable<CommandInfo> commandList = GetCommands();
-
-            var builder = new StringBuilder();
-
-            builder.AppendLine(
-                "Are you trying to use me? Tag me, tell me a command, and provide additional information when needed.");
-            builder.AppendLine();
-            builder.Append($"Usage: @{foldingBotConfig.BotName} ");
-            builder.AppendLine("{command} {data}");
-            builder.AppendLine();
-            builder.AppendLine("Commands -");
-
-            foreach (CommandInfo command in commandList)
-            {
-                var usageAttribute =
-                    command.Attributes.FirstOrDefault(attribute => attribute is UsageAttribute) as UsageAttribute;
-
-                if (usageAttribute is default(UsageAttribute))
-                {
-                    builder.AppendLine($"\t{command.Name} - {command.Summary}");
-                }
-                else
-                {
-                    builder.AppendLine($"\t{command.Name} {usageAttribute.Usage} - {command.Summary}");
-                }
-            }
-
-            return builder.ToString();
-        }
-
         public async Task<string> LookupUser(string searchCriteria)
         {
-            MembersResponse membersResponse = await CallApi<MembersResponse>("/v1/GetMembers");
+            var membersResponse = await CallApi<MembersResponse>("/v1/GetMembers");
 
             if (membersResponse == default)
             {
@@ -148,12 +126,8 @@
             }
 
             IEnumerable<Member> matchingMembers = membersResponse.Members.Where(member =>
-                member.UserName.StartsWith(searchCriteria,
-                    StringComparison
-                        .CurrentCultureIgnoreCase)
-                || member.UserName.EndsWith(searchCriteria,
-                    StringComparison
-                        .CurrentCultureIgnoreCase));
+                member.UserName.StartsWith(searchCriteria, StringComparison.CurrentCultureIgnoreCase)
+                || member.UserName.EndsWith(searchCriteria, StringComparison.CurrentCultureIgnoreCase));
 
             if (matchingMembers.IsNullOrEmpty())
             {
@@ -238,12 +212,25 @@
             }
         }
 
-        private IEnumerable<CommandInfo> GetCommands()
+        private DateTime GetDistributionDate()
         {
-            List<CommandInfo> commands = commandService.GetCommands().ToList();
-            commands.Sort((command1, command2) =>
-                string.Compare(command1.Name, command2.Name, StringComparison.CurrentCulture));
-            return commands;
+            DateTime now = DateTime.Now;
+            DateTime defaultDistroDate = GetDistributionDate(now.Year, now.Month);
+            DateTime distributionDate = FoldingBotRuntimeChanges.DistroDateTime ?? defaultDistroDate;
+            DateTime endDistributionDate = distributionDate.AddDays(1).AddMinutes(-1);
+
+            if (now > endDistributionDate)
+            {
+                DateTime nextMonth = now.AddMonths(1);
+                distributionDate = GetDistributionDate(nextMonth.Year, nextMonth.Month);
+
+                if (FoldingBotRuntimeChanges.DistroDateTime <= defaultDistroDate)
+                {
+                    FoldingBotRuntimeChanges.DistroDateTime = null;
+                }
+            }
+
+            return distributionDate;
         }
 
         private DateTime GetDistributionDate(int year, int month)

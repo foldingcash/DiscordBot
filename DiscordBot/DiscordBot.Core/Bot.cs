@@ -9,8 +9,6 @@
     using Discord.Commands;
     using Discord.WebSocket;
 
-    using DiscordBot.Core.Interfaces;
-
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
@@ -45,7 +43,7 @@
                 LogStartup();
                 await commandService.AddModulesAsync();
                 client = new DiscordSocketClient();
-                string token = GetToken();
+                string token = botConfig.Token;
                 await client.LoginAsync(TokenType.Bot, token);
                 await client.StartAsync();
 
@@ -66,11 +64,6 @@
                 client.Dispose();
                 client = null;
             }
-        }
-
-        private string GetToken()
-        {
-            return botConfig.Token;
         }
 
         private async Task HandleMessageReceived(SocketMessage rawMessage)
