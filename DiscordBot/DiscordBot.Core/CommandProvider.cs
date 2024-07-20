@@ -103,23 +103,32 @@
                        Enumerable.Empty<object>(), services);
         }
 
-        public IEnumerable<CommandInfo> GetCommands()
+        public IEnumerable<CommandInfo> GetCommands(SocketCommandContext context)
         {
-            bool isDevMode = environment.IsDevelopment();
+            if(IsAdminDirectMessage(context))
+            {
+                return innerService.Commands;
+            }
 
-            return isDevMode ? innerService.Commands : innerService.Commands
-                                                                   .Where(command =>
-                                                                       command.Attributes.All(attribute =>
-                                                                           !(attribute is HiddenAttribute)))
-                                                                   .Where(command =>
-                                                                       command.Attributes.All(attribute =>
-                                                                           !(attribute is DevelopmentAttribute)))
-                                                                   .Where(command =>
-                                                                       command.Attributes.All(attribute =>
-                                                                           !(attribute is DeprecatedAttribute)))
-                                                                   .Where(command =>
-                                                                       !RuntimeChanges.DisabledCommands.Contains(
-                                                                           command.Name));
+            return innerService.Commands
+                .Where(command =>
+                    command.Attributes.All(attribute =>
+                        !(attribute is DefaultAttribute)))
+                .Where(command =>
+                    command.Attributes.All(attribute =>
+                        !(attribute is HiddenAttribute)))
+                .Where(command =>
+                    command.Attributes.All(attribute =>
+                        !(attribute is DevelopmentAttribute)))
+                .Where(command =>
+                    command.Attributes.All(attribute =>
+                        !(attribute is DeprecatedAttribute)))
+                .Where(command =>
+                    command.Attributes.All(attribute =>
+                        !(attribute is AdminOnlyAttribute)))
+                .Where(command =>
+                    !RuntimeChanges.DisabledCommands.Contains(
+                        command.Name));
         }
 
         private string GetBotChannel()
@@ -131,6 +140,12 @@
         {
             return string.Equals(foldingBotConfig.AdminUser, commandContext.Message.Author.Username,
                 StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool IsAdminDirectMessage(SocketCommandContext commandContext)
+        {
+            return string.Equals(foldingBotConfig.AdminUser, commandContext.Message.Author.Username,
+                StringComparison.OrdinalIgnoreCase) && commandContext.IsPrivate;
         }
     }
 }

@@ -92,7 +92,7 @@
         [Summary("Show the list of available commands")]
         public async Task Help()
         {
-            await Reply(Usage());
+            await Reply(Usage(Context));
         }
 
         [Default]
@@ -101,20 +101,20 @@
         [Summary("Show the list of available commands")]
         public async Task NoCommand()
         {
-            await Reply(Usage());
+            await Reply(Usage(Context));
         }
 
-        private IEnumerable<CommandInfo> GetCommands()
+        private IEnumerable<CommandInfo> GetCommands(SocketCommandContext context)
         {
-            List<CommandInfo> commands = commandService.GetCommands().ToList();
+            List<CommandInfo> commands = commandService.GetCommands(context).ToList();
             commands.Sort((command1, command2) =>
                 string.Compare(command1.Name, command2.Name, StringComparison.CurrentCulture));
             return commands;
         }
 
-        private string Usage()
+        private string Usage(SocketCommandContext context)
         {
-            IEnumerable<CommandInfo> commandList = GetCommands();
+            IEnumerable<CommandInfo> commandList = GetCommands(context);
 
             var builder = new StringBuilder();
 

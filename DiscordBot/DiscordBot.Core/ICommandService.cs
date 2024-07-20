@@ -13,6 +13,6 @@
 
         Task<IResult> ExecuteDefaultResponse(SocketCommandContext commandContext, int argumentPosition);
 
-        IEnumerable<CommandInfo> GetCommands();
+        IEnumerable<CommandInfo> GetCommands(SocketCommandContext context);
     }
 }

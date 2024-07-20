@@ -31,22 +31,6 @@
 
         private FoldingBotConfig config => configMonitor.CurrentValue;
 
-        [Hidden]
-        [Command("bad bot")]
-        [Summary("Tell the bot it's being bad")]
-        public Task AcknowledgeBadBot()
-        {
-            return Reply("D:");
-        }
-
-        [Hidden]
-        [Command("good bot")]
-        [Summary("Tell the bot it's being good")]
-        public Task AcknowledgeGoodBot()
-        {
-            return Reply(":D");
-        }
-
         [AdminOnly]
         [Hidden]
         [Command("announce")]
@@ -64,46 +48,6 @@
         public Task ChangeDistroDate(DateTime date)
         {
             return Reply(service.ChangeDistroDate(date));
-        }
-
-        [AdminOnly]
-        [Hidden]
-        [Command("disable command")]
-        [Alias("dc")]
-        [Usage("{command name}")]
-        [Summary("Disables a specified command")]
-        public async Task DisableCommand([Remainder] string commandName)
-        {
-            CommandAttribute command = GetCommandAttribute();
-            if (commandName == command.Text)
-            {
-                logger.LogWarning("Disabling this command is not recommended...");
-                return;
-            }
-
-            command = GetCommandAttribute(nameof(EnableCommand));
-            if (commandName == command.Text)
-            {
-                logger.LogWarning("Disabling this command is not recommended...");
-                return;
-            }
-
-            logger.LogDebug("Disabling a command...");
-            RuntimeChanges.DisabledCommands.Add(commandName);
-            await Reply("Completed");
-        }
-
-        [AdminOnly]
-        [Hidden]
-        [Command("enable command")]
-        [Alias("ec")]
-        [Usage("{command name}")]
-        [Summary("Enables a specified command")]
-        public async Task EnableCommand([Remainder] string commandName)
-        {
-            logger.LogDebug("Enabling a command...");
-            RuntimeChanges.DisabledCommands.Remove(commandName);
-            await Reply("Completed");
         }
 
         [Command("fah")]
