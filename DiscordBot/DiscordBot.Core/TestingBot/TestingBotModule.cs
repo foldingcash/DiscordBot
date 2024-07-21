@@ -12,8 +12,8 @@
     {
         private readonly ILogger logger;
 
-        public TestingBotModule(ILogger<TestingBotModule> logger)
-            : base(logger)
+        public TestingBotModule(ILogger<TestingBotModule> logger, IBotConfigurationService botConfigurationService)
+            : base(logger, botConfigurationService)
         {
             this.logger = logger;
         }

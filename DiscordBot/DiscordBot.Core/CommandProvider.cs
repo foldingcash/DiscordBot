@@ -18,7 +18,7 @@
     public class CommandProvider : ICommandService
     {
         private readonly IHostEnvironment environment;
-
+        private readonly IBotConfigurationService botConfigurationService;
         private readonly IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor;
 
         private readonly CommandService innerService;
@@ -28,7 +28,7 @@
         private readonly IServiceProvider services;
 
         public CommandProvider(ILogger<CommandProvider> logger, IServiceProvider services,
-                               IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor, IHostEnvironment environment)
+                               IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor, IHostEnvironment environment, IBotConfigurationService botConfigurationService)
         {
             innerService = new CommandService(new CommandServiceConfig());
 
@@ -36,6 +36,7 @@
             this.services = services;
             this.foldingBotConfigMonitor = foldingBotConfigMonitor;
             this.environment = environment;
+            this.botConfigurationService = botConfigurationService;
         }
 
         private FoldingBotConfig foldingBotConfig => foldingBotConfigMonitor?.CurrentValue ?? new FoldingBotConfig();
@@ -107,7 +108,9 @@
         {
             if(IsAdminDirectMessage(context))
             {
-                return innerService.Commands;
+                return innerService.Commands.Where(command =>
+                    command.Attributes.All(attribute =>
+                        !(attribute is DevelopmentAttribute)) || environment.IsDevelopment());
             }
 
             return innerService.Commands
@@ -127,7 +130,7 @@
                     command.Attributes.All(attribute =>
                         !(attribute is AdminOnlyAttribute)))
                 .Where(command =>
-                    !RuntimeChanges.DisabledCommands.Contains(
+                    !botConfigurationService.DisabledCommandsContains(
                         command.Name));
         }
 

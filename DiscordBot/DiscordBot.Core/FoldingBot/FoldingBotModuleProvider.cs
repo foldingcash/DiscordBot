@@ -19,16 +19,17 @@
     public class FoldingBotModuleProvider : IFoldingBotModuleService
     {
         private readonly IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor;
-
+        private readonly IFoldingBotConfigurationService foldingBotConfigurationService;
         private readonly ILogger<FoldingBotModuleProvider> logger;
 
         private Func<string, Task> reply = message => Task.CompletedTask;
 
         public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger,
-                                        IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor)
+                                        IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor, IFoldingBotConfigurationService foldingBotConfigurationService)
         {
             this.logger = logger;
             this.foldingBotConfigMonitor = foldingBotConfigMonitor;
+            this.foldingBotConfigurationService = foldingBotConfigurationService;
         }
 
         private FoldingBotConfig foldingBotConfig => foldingBotConfigMonitor?.CurrentValue ?? new FoldingBotConfig();
@@ -40,13 +41,13 @@
 
         public string ChangeDistroDate(DateTime date)
         {
-            if (date.Date < DateTime.Now.Date)
+            if (date.Date < DateTime.UtcNow.Date)
             {
                 return "The provided date is in the past, distro date was not updated.";
             }
 
-            FoldingBotRuntimeChanges.DistroDateTime = date.Date;
-            return $"New distro date is {FoldingBotRuntimeChanges.DistroDateTime.Value.ToShortDateString()}";
+            foldingBotConfigurationService.UpdateDistroDate(date.Date);
+            return $"New distro date is {foldingBotConfigurationService.GetDistroDate().Value.ToShortDateString()}";
         }
 
         public string GetDistributionAnnouncement()
@@ -212,9 +213,9 @@
 
         private DateTime GetDistributionDate()
         {
-            DateTime now = DateTime.UtcNow;
+            DateTime now = DateTime.UtcNow.Date;
             DateTime defaultDistroDate = GetDistributionDate(now.Year, now.Month);
-            DateTime distributionDate = FoldingBotRuntimeChanges.DistroDateTime ?? defaultDistroDate;
+            DateTime distributionDate = foldingBotConfigurationService.GetDistroDate() ?? defaultDistroDate;
             DateTime endDistributionDate = distributionDate.AddDays(1).AddMinutes(-1);
 
             if (now > endDistributionDate)
@@ -222,9 +223,9 @@
                 DateTime nextMonth = now.AddMonths(1);
                 distributionDate = GetDistributionDate(nextMonth.Year, nextMonth.Month);
 
-                if (FoldingBotRuntimeChanges.DistroDateTime <= defaultDistroDate)
+                if (foldingBotConfigurationService.GetDistroDate() <= defaultDistroDate)
                 {
-                    FoldingBotRuntimeChanges.DistroDateTime = null;
+                    foldingBotConfigurationService.ClearDistroDate();
                 }
             }
 

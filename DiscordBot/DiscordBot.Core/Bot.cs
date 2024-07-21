@@ -16,7 +16,7 @@
     public class Bot : IHostedService
     {
         private readonly IOptionsMonitor<BotConfig> botConfigMonitor;
-
+        private readonly IBotConfigurationService botConfigurationService;
         private readonly ICommandService commandService;
 
         private readonly IHostEnvironment environment;
@@ -26,12 +26,13 @@
         private DiscordSocketClient client;
 
         public Bot(ICommandService commandService, ILogger<Bot> logger, IHostEnvironment environment,
-                   IOptionsMonitor<BotConfig> botConfigMonitor)
+                   IOptionsMonitor<BotConfig> botConfigMonitor, IBotConfigurationService botConfigurationService)
         {
             this.commandService = commandService;
             this.logger = logger;
             this.environment = environment;
             this.botConfigMonitor = botConfigMonitor;
+            this.botConfigurationService = botConfigurationService;
         }
 
         private BotConfig botConfig => botConfigMonitor?.CurrentValue ?? new BotConfig();
@@ -41,6 +42,7 @@
             try
             {
                 LogStartup();
+                botConfigurationService.ReadConfiguration();
                 await commandService.AddModulesAsync();
                 client = new DiscordSocketClient();
                 string token = botConfig.Token;

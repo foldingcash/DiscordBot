@@ -18,16 +18,17 @@
         private readonly IOptionsMonitor<BotConfig> botConfigMonitor;
 
         private readonly ICommandService commandService;
-
+        private readonly IBotConfigurationService botConfigurationService;
         private readonly ILogger logger;
 
         public BaseModule(ILogger<BaseModule> logger, IOptionsMonitor<BotConfig> botConfigMonitor,
-                          ICommandService commandService)
-            : base(logger)
+                          ICommandService commandService, IBotConfigurationService botConfigurationService)
+            : base(logger, botConfigurationService)
         {
             this.logger = logger;
             this.botConfigMonitor = botConfigMonitor;
             this.commandService = commandService;
+            this.botConfigurationService = botConfigurationService;
         }
 
         private BotConfig config => botConfigMonitor.CurrentValue;
@@ -71,7 +72,7 @@
             }
 
             logger.LogDebug("Disabling a command...");
-            RuntimeChanges.DisabledCommands.Add(commandName);
+            botConfigurationService.AddDisabledCommands(commandName);
             await Reply("Completed");
         }
 
@@ -84,7 +85,7 @@
         public async Task EnableCommand([Remainder] string commandName)
         {
             logger.LogDebug("Enabling a command...");
-            RuntimeChanges.DisabledCommands.Remove(commandName);
+            botConfigurationService.RemoveDisabledCommands(commandName);
             await Reply("Completed");
         }
 

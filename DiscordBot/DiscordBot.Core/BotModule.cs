@@ -21,10 +21,12 @@
         private readonly Emoji hourglass = new Emoji("\u23F3");
 
         private readonly ILogger logger;
+        private readonly IBotConfigurationService botConfigurationService;
 
-        public BotModule(ILogger logger)
+        public BotModule(ILogger logger, IBotConfigurationService botConfigurationService)
         {
             this.logger = logger;
+            this.botConfigurationService = botConfigurationService;
         }
 
         protected async Task Announce(string message, string announceGuild, string announceChannel)
@@ -52,7 +54,7 @@
         {
             CommandAttribute commandAttribute = GetCommandAttribute(methodName);
 
-            if (RuntimeChanges.DisabledCommands.Contains(commandAttribute.Text))
+            if (botConfigurationService.DisabledCommandsContains(commandAttribute.Text))
             {
                 return;
             }

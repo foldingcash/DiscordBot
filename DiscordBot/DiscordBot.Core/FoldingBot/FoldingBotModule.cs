@@ -19,8 +19,8 @@
         private readonly IFoldingBotModuleService service;
 
         public FoldingBotModule(IFoldingBotModuleService service, ILogger<FoldingBotModule> logger,
-                                IOptionsMonitor<FoldingBotConfig> configMonitor)
-            : base(logger)
+                                IOptionsMonitor<FoldingBotConfig> configMonitor, IFoldingBotConfigurationService foldingBotConfigurationService)
+            : base(logger, foldingBotConfigurationService)
         {
             this.service = service;
             this.logger = logger;
