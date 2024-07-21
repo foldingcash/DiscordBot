@@ -11,8 +11,6 @@
     using System.Threading;
     using System.Threading.Tasks;
 
-    using Castle.Core.Internal;
-
     using DiscordBot.Core.FoldingBot.Models;
 
     using Microsoft.Extensions.Logging;
@@ -69,7 +67,7 @@
 
         public string GetNextDistributionDate()
         {
-            DateTime now = DateTime.Now;
+            DateTime now = DateTime.UtcNow;
             DateTime distributionDate = GetDistributionDate();
             DateTime endDistributionDate = distributionDate.AddDays(1).AddMinutes(-1);
 
@@ -129,7 +127,7 @@
                 member.UserName.StartsWith(searchCriteria, StringComparison.CurrentCultureIgnoreCase)
                 || member.UserName.EndsWith(searchCriteria, StringComparison.CurrentCultureIgnoreCase));
 
-            if (matchingMembers.IsNullOrEmpty())
+            if (!matchingMembers?.Any() ?? true)
             {
                 return "No matches found. Ensure you are searching the start or ending of your username and try again.";
             }
@@ -214,7 +212,7 @@
 
         private DateTime GetDistributionDate()
         {
-            DateTime now = DateTime.Now;
+            DateTime now = DateTime.UtcNow;
             DateTime defaultDistroDate = GetDistributionDate(now.Year, now.Month);
             DateTime distributionDate = FoldingBotRuntimeChanges.DistroDateTime ?? defaultDistroDate;
             DateTime endDistributionDate = distributionDate.AddDays(1).AddMinutes(-1);
