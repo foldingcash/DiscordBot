@@ -132,14 +132,23 @@
                 var usageAttribute =
                     command.Attributes.FirstOrDefault(attribute => attribute is UsageAttribute) as UsageAttribute;
 
+                builder.Append("\t");
+
+                if(botConfigurationService.DisabledCommandsContains(command.Name))
+                {
+                    builder.Append("(Disabled) ");
+                }
+
                 if (usageAttribute is default(UsageAttribute))
                 {
-                    builder.AppendLine($"\t{command.Name} - {command.Summary}");
+                    builder.Append($"{command.Name} - {command.Summary}");
                 }
                 else
                 {
-                    builder.AppendLine($"\t{command.Name} {usageAttribute.Usage} - {command.Summary}");
+                    builder.Append($"{command.Name} {usageAttribute.Usage} - {command.Summary}");
                 }
+
+                builder.AppendLine();
             }
 
             return builder.ToString();
