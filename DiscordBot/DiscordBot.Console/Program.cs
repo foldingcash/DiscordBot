@@ -17,14 +17,16 @@
         {
             return Host.CreateDefaultBuilder(args).UseWindowsService().ConfigureServices((context, services) =>
             {
-                services.AddHostedService<Bot>();
-                services.AddSingleton<ICommandService, CommandProvider>();
+                services
+                    .AddHostedService<Bot>()
+                    .AddSingleton<ICommandService, CommandProvider>()
+                    .Configure<BotSettings>(context.Configuration.GetSection("AppSettings"));
 
-                services.Configure<BotConfig>(context.Configuration.GetSection("AppSettings"));
-
-                services.AddSingleton<IFoldingBotModuleService, FoldingBotModuleProvider>();
-
-                services.Configure<FoldingBotConfig>(context.Configuration.GetSection("AppSettings"));
+                services
+                    .AddSingleton<IFoldingBotModuleService, FoldingBotModuleProvider>()
+                    .Configure<FoldingBotSettings>(context.Configuration.GetSection("AppSettings"))
+                    .AddSingleton<IFoldingBotConfigurationService, FoldingBotConfigurationProvider>()
+                    .AddSingleton<IBotConfigurationService>(provider => provider.GetRequiredService<IFoldingBotConfigurationService>());
             });
         }
     }

@@ -11,8 +11,6 @@
     using System.Threading;
     using System.Threading.Tasks;
 
-    using Castle.Core.Internal;
-
     using DiscordBot.Core.FoldingBot.Models;
 
     using Microsoft.Extensions.Logging;
@@ -20,20 +18,21 @@
 
     public class FoldingBotModuleProvider : IFoldingBotModuleService
     {
-        private readonly IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor;
-
+        private readonly IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor;
+        private readonly IFoldingBotConfigurationService foldingBotConfigurationService;
         private readonly ILogger<FoldingBotModuleProvider> logger;
 
         private Func<string, Task> reply = message => Task.CompletedTask;
 
         public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger,
-                                        IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor)
+                                        IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor, IFoldingBotConfigurationService foldingBotConfigurationService)
         {
             this.logger = logger;
-            this.foldingBotConfigMonitor = foldingBotConfigMonitor;
+            this.foldingBotSettingsMonitor = foldingBotSettingsMonitor;
+            this.foldingBotConfigurationService = foldingBotConfigurationService;
         }
 
-        private FoldingBotConfig foldingBotConfig => foldingBotConfigMonitor?.CurrentValue ?? new FoldingBotConfig();
+        private FoldingBotSettings foldingBotSettings => foldingBotSettingsMonitor?.CurrentValue ?? new FoldingBotSettings();
 
         public Func<string, Task> Reply
         {
@@ -42,13 +41,13 @@
 
         public string ChangeDistroDate(DateTime date)
         {
-            if (date.Date < DateTime.Now.Date)
+            if (date.Date < DateTime.UtcNow.Date)
             {
                 return "The provided date is in the past, distro date was not updated.";
             }
 
-            FoldingBotRuntimeChanges.DistroDateTime = date.Date;
-            return $"New distro date is {FoldingBotRuntimeChanges.DistroDateTime.Value.ToShortDateString()}";
+            foldingBotConfigurationService.UpdateDistroDate(date.Date);
+            return $"New distro date is {foldingBotConfigurationService.GetDistroDate().Value.ToShortDateString()}";
         }
 
         public string GetDistributionAnnouncement()
@@ -59,17 +58,17 @@
 
         public string GetFoldingAtHomeUrl()
         {
-            return $"Visit {foldingBotConfig.FoldingAtHomeUrl} to download folding@home";
+            return $"Visit {foldingBotSettings.FoldingAtHomeUrl} to download folding@home";
         }
 
         public string GetHomeUrl()
         {
-            return $"Visit {foldingBotConfig.HomeUrl} to learn more about this project";
+            return $"Visit {foldingBotSettings.HomeUrl} to learn more about this project";
         }
 
         public string GetNextDistributionDate()
         {
-            DateTime now = DateTime.Now;
+            DateTime now = DateTime.UtcNow;
             DateTime distributionDate = GetDistributionDate();
             DateTime endDistributionDate = distributionDate.AddDays(1).AddMinutes(-1);
 
@@ -129,7 +128,7 @@
                 member.UserName.StartsWith(searchCriteria, StringComparison.CurrentCultureIgnoreCase)
                 || member.UserName.EndsWith(searchCriteria, StringComparison.CurrentCultureIgnoreCase));
 
-            if (matchingMembers.IsNullOrEmpty())
+            if (!matchingMembers?.Any() ?? true)
             {
                 return "No matches found. Ensure you are searching the start or ending of your username and try again.";
             }
@@ -151,7 +150,7 @@
         {
             try
             {
-                var foldingApiUri = new Uri(foldingBotConfig.FoldingApiUri, UriKind.Absolute);
+                var foldingApiUri = new Uri(foldingBotSettings.FoldingApiUri, UriKind.Absolute);
                 var getMemberStatsPath = new Uri(relativePath, UriKind.Relative);
                 var requestUri = new Uri(foldingApiUri, getMemberStatsPath);
 
@@ -214,9 +213,9 @@
 
         private DateTime GetDistributionDate()
         {
-            DateTime now = DateTime.Now;
+            DateTime now = DateTime.UtcNow.Date;
             DateTime defaultDistroDate = GetDistributionDate(now.Year, now.Month);
-            DateTime distributionDate = FoldingBotRuntimeChanges.DistroDateTime ?? defaultDistroDate;
+            DateTime distributionDate = foldingBotConfigurationService.GetDistroDate() ?? defaultDistroDate;
             DateTime endDistributionDate = distributionDate.AddDays(1).AddMinutes(-1);
 
             if (now > endDistributionDate)
@@ -224,9 +223,9 @@
                 DateTime nextMonth = now.AddMonths(1);
                 distributionDate = GetDistributionDate(nextMonth.Year, nextMonth.Month);
 
-                if (FoldingBotRuntimeChanges.DistroDateTime <= defaultDistroDate)
+                if (foldingBotConfigurationService.GetDistroDate() <= defaultDistroDate)
                 {
-                    FoldingBotRuntimeChanges.DistroDateTime = null;
+                    foldingBotConfigurationService.ClearDistroDate();
                 }
             }
 

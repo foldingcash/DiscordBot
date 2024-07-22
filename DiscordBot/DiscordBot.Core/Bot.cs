@@ -15,8 +15,8 @@
 
     public class Bot : IHostedService
     {
-        private readonly IOptionsMonitor<BotConfig> botConfigMonitor;
-
+        private readonly IOptionsMonitor<BotSettings> botSettingsMonitor;
+        private readonly IBotConfigurationService botConfigurationService;
         private readonly ICommandService commandService;
 
         private readonly IHostEnvironment environment;
@@ -26,24 +26,26 @@
         private DiscordSocketClient client;
 
         public Bot(ICommandService commandService, ILogger<Bot> logger, IHostEnvironment environment,
-                   IOptionsMonitor<BotConfig> botConfigMonitor)
+                   IOptionsMonitor<BotSettings> botSettingsMonitor, IBotConfigurationService botConfigurationService)
         {
             this.commandService = commandService;
             this.logger = logger;
             this.environment = environment;
-            this.botConfigMonitor = botConfigMonitor;
+            this.botSettingsMonitor = botSettingsMonitor;
+            this.botConfigurationService = botConfigurationService;
         }
 
-        private BotConfig botConfig => botConfigMonitor?.CurrentValue ?? new BotConfig();
+        private BotSettings botSettings => botSettingsMonitor?.CurrentValue ?? new BotSettings();
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             try
             {
                 LogStartup();
+                await botConfigurationService.ReadConfiguration();
                 await commandService.AddModulesAsync();
                 client = new DiscordSocketClient();
-                string token = botConfig.Token;
+                string token = botSettings.Token;
                 await client.LoginAsync(TokenType.Bot, token);
                 await client.StartAsync();
 

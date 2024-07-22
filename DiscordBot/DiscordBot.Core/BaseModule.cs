@@ -15,22 +15,23 @@
 
     internal class BaseModule : BotModule
     {
-        private readonly IOptionsMonitor<BotConfig> botConfigMonitor;
+        private readonly IOptionsMonitor<BotSettings> botSettingsMonitor;
 
         private readonly ICommandService commandService;
-
+        private readonly IBotConfigurationService botConfigurationService;
         private readonly ILogger logger;
 
-        public BaseModule(ILogger<BaseModule> logger, IOptionsMonitor<BotConfig> botConfigMonitor,
-                          ICommandService commandService)
-            : base(logger)
+        public BaseModule(ILogger<BaseModule> logger, IOptionsMonitor<BotSettings> botSettingsMonitor,
+                          ICommandService commandService, IBotConfigurationService botConfigurationService)
+            : base(logger, botConfigurationService)
         {
             this.logger = logger;
-            this.botConfigMonitor = botConfigMonitor;
+            this.botSettingsMonitor = botSettingsMonitor;
             this.commandService = commandService;
+            this.botConfigurationService = botConfigurationService;
         }
 
-        private BotConfig config => botConfigMonitor.CurrentValue;
+        private BotSettings settings => botSettingsMonitor.CurrentValue;
 
         [Hidden]
         [Command("bad bot")]
@@ -51,7 +52,7 @@
         [AdminOnly]
         [Hidden]
         [Command("disable command")]
-        [Alias("dc")]
+        [Alias("disable", "dc")]
         [Usage("{command name}")]
         [Summary("Disables a specified command")]
         public async Task DisableCommand([Remainder] string commandName)
@@ -71,20 +72,20 @@
             }
 
             logger.LogDebug("Disabling a command...");
-            RuntimeChanges.DisabledCommands.Add(commandName);
+            await botConfigurationService.AddDisabledCommands(commandName);
             await Reply("Completed");
         }
 
         [AdminOnly]
         [Hidden]
         [Command("enable command")]
-        [Alias("ec")]
+        [Alias("enable", "ec")]
         [Usage("{command name}")]
         [Summary("Enables a specified command")]
         public async Task EnableCommand([Remainder] string commandName)
         {
             logger.LogDebug("Enabling a command...");
-            RuntimeChanges.DisabledCommands.Remove(commandName);
+            await botConfigurationService.RemoveDisabledCommands(commandName);
             await Reply("Completed");
         }
 
@@ -92,7 +93,7 @@
         [Summary("Show the list of available commands")]
         public async Task Help()
         {
-            await Reply(Usage());
+            await Reply(Usage(Context));
         }
 
         [Default]
@@ -101,20 +102,20 @@
         [Summary("Show the list of available commands")]
         public async Task NoCommand()
         {
-            await Reply(Usage());
+            await Reply(Usage(Context));
         }
 
-        private IEnumerable<CommandInfo> GetCommands()
+        private IEnumerable<CommandInfo> GetCommands(SocketCommandContext context)
         {
-            List<CommandInfo> commands = commandService.GetCommands().ToList();
+            List<CommandInfo> commands = commandService.GetCommands(context).ToList();
             commands.Sort((command1, command2) =>
                 string.Compare(command1.Name, command2.Name, StringComparison.CurrentCulture));
             return commands;
         }
 
-        private string Usage()
+        private string Usage(SocketCommandContext context)
         {
-            IEnumerable<CommandInfo> commandList = GetCommands();
+            IEnumerable<CommandInfo> commandList = GetCommands(context);
 
             var builder = new StringBuilder();
 
@@ -122,7 +123,7 @@
                 "To use me, tag me or tell me a command and provide additional information when needed.");
             builder.AppendLine();
             builder.AppendLine("Usage: !{command} {data}");
-            builder.AppendLine($"Usage: @{config.BotName} {{command}} {{data}}");
+            builder.AppendLine($"Usage: @{settings.BotName} {{command}} {{data}}");
             builder.AppendLine();
             builder.AppendLine("Commands -");
 
