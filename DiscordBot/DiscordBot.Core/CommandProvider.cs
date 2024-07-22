@@ -19,7 +19,7 @@
     {
         private readonly IHostEnvironment environment;
         private readonly IBotConfigurationService botConfigurationService;
-        private readonly IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor;
+        private readonly IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor;
 
         private readonly CommandService innerService;
 
@@ -28,18 +28,18 @@
         private readonly IServiceProvider services;
 
         public CommandProvider(ILogger<CommandProvider> logger, IServiceProvider services,
-                               IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor, IHostEnvironment environment, IBotConfigurationService botConfigurationService)
+                               IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor, IHostEnvironment environment, IBotConfigurationService botConfigurationService)
         {
             innerService = new CommandService(new CommandServiceConfig());
 
             this.logger = logger;
             this.services = services;
-            this.foldingBotConfigMonitor = foldingBotConfigMonitor;
+            this.foldingBotSettingsMonitor = foldingBotSettingsMonitor;
             this.environment = environment;
             this.botConfigurationService = botConfigurationService;
         }
 
-        private FoldingBotConfig foldingBotConfig => foldingBotConfigMonitor?.CurrentValue ?? new FoldingBotConfig();
+        private FoldingBotSettings foldingBotSettings => foldingBotSettingsMonitor?.CurrentValue ?? new FoldingBotSettings();
 
         public async Task AddModulesAsync()
         {
@@ -136,18 +136,18 @@
 
         private string GetBotChannel()
         {
-            return foldingBotConfig.BotChannel;
+            return foldingBotSettings.BotChannel;
         }
 
         private bool IsAdminRequesting(SocketCommandContext commandContext)
         {
-            return string.Equals(foldingBotConfig.AdminUser, commandContext.Message.Author.Username,
+            return string.Equals(foldingBotSettings.AdminUser, commandContext.Message.Author.Username,
                 StringComparison.OrdinalIgnoreCase);
         }
 
         private bool IsAdminDirectMessage(SocketCommandContext commandContext)
         {
-            return string.Equals(foldingBotConfig.AdminUser, commandContext.Message.Author.Username,
+            return string.Equals(foldingBotSettings.AdminUser, commandContext.Message.Author.Username,
                 StringComparison.OrdinalIgnoreCase) && commandContext.IsPrivate;
         }
     }

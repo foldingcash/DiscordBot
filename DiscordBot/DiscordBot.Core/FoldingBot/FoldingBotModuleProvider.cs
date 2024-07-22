@@ -18,21 +18,21 @@
 
     public class FoldingBotModuleProvider : IFoldingBotModuleService
     {
-        private readonly IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor;
+        private readonly IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor;
         private readonly IFoldingBotConfigurationService foldingBotConfigurationService;
         private readonly ILogger<FoldingBotModuleProvider> logger;
 
         private Func<string, Task> reply = message => Task.CompletedTask;
 
         public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger,
-                                        IOptionsMonitor<FoldingBotConfig> foldingBotConfigMonitor, IFoldingBotConfigurationService foldingBotConfigurationService)
+                                        IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor, IFoldingBotConfigurationService foldingBotConfigurationService)
         {
             this.logger = logger;
-            this.foldingBotConfigMonitor = foldingBotConfigMonitor;
+            this.foldingBotSettingsMonitor = foldingBotSettingsMonitor;
             this.foldingBotConfigurationService = foldingBotConfigurationService;
         }
 
-        private FoldingBotConfig foldingBotConfig => foldingBotConfigMonitor?.CurrentValue ?? new FoldingBotConfig();
+        private FoldingBotSettings foldingBotSettings => foldingBotSettingsMonitor?.CurrentValue ?? new FoldingBotSettings();
 
         public Func<string, Task> Reply
         {
@@ -58,12 +58,12 @@
 
         public string GetFoldingAtHomeUrl()
         {
-            return $"Visit {foldingBotConfig.FoldingAtHomeUrl} to download folding@home";
+            return $"Visit {foldingBotSettings.FoldingAtHomeUrl} to download folding@home";
         }
 
         public string GetHomeUrl()
         {
-            return $"Visit {foldingBotConfig.HomeUrl} to learn more about this project";
+            return $"Visit {foldingBotSettings.HomeUrl} to learn more about this project";
         }
 
         public string GetNextDistributionDate()
@@ -150,7 +150,7 @@
         {
             try
             {
-                var foldingApiUri = new Uri(foldingBotConfig.FoldingApiUri, UriKind.Absolute);
+                var foldingApiUri = new Uri(foldingBotSettings.FoldingApiUri, UriKind.Absolute);
                 var getMemberStatsPath = new Uri(relativePath, UriKind.Relative);
                 var requestUri = new Uri(foldingApiUri, getMemberStatsPath);
 

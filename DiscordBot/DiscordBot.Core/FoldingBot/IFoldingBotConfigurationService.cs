@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace DiscordBot.Core.FoldingBot
 {
     public interface IFoldingBotConfigurationService : IBotConfigurationService
     {
-        void ClearDistroDate();
+        Task ClearDistroDate();
         DateTime? GetDistroDate();
-        void UpdateDistroDate(DateTime date);
+        Task UpdateDistroDate(DateTime date);
     }
 }

@@ -1,6 +1,6 @@
 ﻿namespace DiscordBot.Core.FoldingBot
 {
-    public class FoldingBotConfig
+    public class FoldingBotSettings
     {
         public string AdminUser { get; set; }
 

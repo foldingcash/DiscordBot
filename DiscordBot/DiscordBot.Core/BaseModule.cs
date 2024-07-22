@@ -15,23 +15,23 @@
 
     internal class BaseModule : BotModule
     {
-        private readonly IOptionsMonitor<BotConfig> botConfigMonitor;
+        private readonly IOptionsMonitor<BotSettings> botSettingsMonitor;
 
         private readonly ICommandService commandService;
         private readonly IBotConfigurationService botConfigurationService;
         private readonly ILogger logger;
 
-        public BaseModule(ILogger<BaseModule> logger, IOptionsMonitor<BotConfig> botConfigMonitor,
+        public BaseModule(ILogger<BaseModule> logger, IOptionsMonitor<BotSettings> botSettingsMonitor,
                           ICommandService commandService, IBotConfigurationService botConfigurationService)
             : base(logger, botConfigurationService)
         {
             this.logger = logger;
-            this.botConfigMonitor = botConfigMonitor;
+            this.botSettingsMonitor = botSettingsMonitor;
             this.commandService = commandService;
             this.botConfigurationService = botConfigurationService;
         }
 
-        private BotConfig config => botConfigMonitor.CurrentValue;
+        private BotSettings settings => botSettingsMonitor.CurrentValue;
 
         [Hidden]
         [Command("bad bot")]
@@ -52,7 +52,7 @@
         [AdminOnly]
         [Hidden]
         [Command("disable command")]
-        [Alias("dc")]
+        [Alias("disable", "dc")]
         [Usage("{command name}")]
         [Summary("Disables a specified command")]
         public async Task DisableCommand([Remainder] string commandName)
@@ -72,20 +72,20 @@
             }
 
             logger.LogDebug("Disabling a command...");
-            botConfigurationService.AddDisabledCommands(commandName);
+            await botConfigurationService.AddDisabledCommands(commandName);
             await Reply("Completed");
         }
 
         [AdminOnly]
         [Hidden]
         [Command("enable command")]
-        [Alias("ec")]
+        [Alias("enable", "ec")]
         [Usage("{command name}")]
         [Summary("Enables a specified command")]
         public async Task EnableCommand([Remainder] string commandName)
         {
             logger.LogDebug("Enabling a command...");
-            botConfigurationService.RemoveDisabledCommands(commandName);
+            await botConfigurationService.RemoveDisabledCommands(commandName);
             await Reply("Completed");
         }
 
@@ -123,7 +123,7 @@
                 "To use me, tag me or tell me a command and provide additional information when needed.");
             builder.AppendLine();
             builder.AppendLine("Usage: !{command} {data}");
-            builder.AppendLine($"Usage: @{config.BotName} {{command}} {{data}}");
+            builder.AppendLine($"Usage: @{settings.BotName} {{command}} {{data}}");
             builder.AppendLine();
             builder.AppendLine("Commands -");
 

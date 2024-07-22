@@ -1,26 +1,28 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Microsoft.Extensions.Options;
+using System;
+using System.Threading.Tasks;
 
 namespace DiscordBot.Core.FoldingBot
 {
-    internal class FoldingBotConfigurationProvider : BotConfigurationProvider, IFoldingBotConfigurationService
+    public class FoldingBotConfigurationProvider : BotConfigurationProvider<FoldingBotConfiguration>, IFoldingBotConfigurationService
     {
-        private static DateTime? distroDate = null;
+        public FoldingBotConfigurationProvider(IOptionsMonitor<BotSettings> botSettingsMonitor) : base(botSettingsMonitor) { }
 
-        public void ClearDistroDate()
+        public Task ClearDistroDate()
         {
-            distroDate = null;
+            configuration.DistroDate = null;
+            return WriteConfiguration();
         }
 
         public DateTime? GetDistroDate()
         {
-            return distroDate;
+            return configuration.DistroDate;
         }
 
-        public void UpdateDistroDate(DateTime date)
+        public Task UpdateDistroDate(DateTime date)
         {
-            distroDate = date;
+            configuration.DistroDate = date;
+            return WriteConfiguration();
         }
-    }
+    }    
 }

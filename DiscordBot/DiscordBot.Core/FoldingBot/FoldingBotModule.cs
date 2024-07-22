@@ -12,24 +12,24 @@
 
     internal class FoldingBotModule : BotModule
     {
-        private readonly IOptionsMonitor<FoldingBotConfig> configMonitor;
+        private readonly IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor;
 
         private readonly ILogger logger;
 
         private readonly IFoldingBotModuleService service;
 
         public FoldingBotModule(IFoldingBotModuleService service, ILogger<FoldingBotModule> logger,
-                                IOptionsMonitor<FoldingBotConfig> configMonitor, IFoldingBotConfigurationService foldingBotConfigurationService)
+                                IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor, IFoldingBotConfigurationService foldingBotConfigurationService)
             : base(logger, foldingBotConfigurationService)
         {
             this.service = service;
             this.logger = logger;
-            this.configMonitor = configMonitor;
+            this.foldingBotSettingsMonitor = foldingBotSettingsMonitor;
 
             service.Reply = message => Reply(message, nameof(IFoldingBotModuleService));
         }
 
-        private FoldingBotConfig config => configMonitor.CurrentValue;
+        private FoldingBotSettings foldingBotSettings => foldingBotSettingsMonitor.CurrentValue;
 
         [AdminOnly]
         [Hidden]
@@ -38,7 +38,7 @@
         public async Task AnnounceUpcomingDistribution()
         {
             logger.LogDebug("Announcing the next distribution");
-            await Announce(service.GetDistributionAnnouncement(), config.Guild, config.AnnounceChannel);
+            await Announce(service.GetDistributionAnnouncement(), foldingBotSettings.Guild, foldingBotSettings.AnnounceChannel);
         }
 
         [AdminOnly]

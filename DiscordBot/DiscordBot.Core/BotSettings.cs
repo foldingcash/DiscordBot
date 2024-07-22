@@ -1,9 +1,10 @@
 ﻿namespace DiscordBot.Core
 {
-    public class BotConfig
+    public class BotSettings
     {
         public string BotName { get; set; }
 
         public string Token { get; set; }
+        public string ConfigurationPath { get; set; }
     }
 }

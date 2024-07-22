@@ -1,12 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System.Threading.Tasks;
 
 namespace DiscordBot.Core
 {
     public interface IBotConfigurationService
     {
-        void AddDisabledCommands(string commandName);
-        void ReadConfiguration();
-        void RemoveDisabledCommands(string commandName);
+        Task AddDisabledCommands(string commandName);
+        Task ReadConfiguration();
+        Task RemoveDisabledCommands(string commandName);
         bool DisabledCommandsContains(string name);
     }
 }
