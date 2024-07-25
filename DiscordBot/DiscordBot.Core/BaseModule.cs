@@ -133,11 +133,7 @@
                     command.Attributes.FirstOrDefault(attribute => attribute is UsageAttribute) as UsageAttribute;
 
                 builder.Append("\t");
-
-                if(botConfigurationService.DisabledCommandsContains(command.Name))
-                {
-                    builder.Append("(Disabled) ");
-                }
+                AppendAttributeText(command, builder);
 
                 if (usageAttribute is default(UsageAttribute))
                 {
@@ -152,6 +148,24 @@
             }
 
             return builder.ToString();
+        }
+
+        private void AppendAttributeText(CommandInfo command, StringBuilder builder)
+        {
+            if (botConfigurationService.DisabledCommandsContains(command.Name))
+            {
+                builder.Append("(Disabled) ");
+            }
+
+            if (command.Attributes.Any(attribute => attribute is HiddenAttribute))
+            {
+                builder.Append("(Hidden) ");
+            }
+
+            if (command.Attributes.Any(attribute => attribute is AdminOnlyAttribute))
+            {
+                builder.Append("(Admin) ");
+            }
         }
     }
 }
