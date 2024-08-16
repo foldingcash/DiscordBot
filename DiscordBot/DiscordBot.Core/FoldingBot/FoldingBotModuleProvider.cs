@@ -8,7 +8,6 @@
     using System.Net.Http;
     using System.Runtime.Serialization.Json;
     using System.Text;
-    using System.Threading;
     using System.Threading.Tasks;
 
     using DiscordBot.Core.FoldingBot.Models;
@@ -175,7 +174,7 @@
                     {
                         await reply("The hamsters are slow today...please give us more time");
                         logger.LogDebug("Going to attempt to download again after sleeping");
-                        Thread.Sleep(sleepInSeconds * 1000);
+                        await Task.Delay(sleepInSeconds * 1000);
                         return await CallApi<T>(relativePath, --retryAttempts);
                     }
 
@@ -201,7 +200,7 @@
                 {
                     await reply("The hamsters are slow today...please give us more time");
                     logger.LogDebug(exception, "Going to attempt to download again after sleeping");
-                    Thread.Sleep(sleepInSeconds * 1000);
+                    await Task.Delay(sleepInSeconds * 1000);
                     return await CallApi<T>(relativePath, --retryAttempts);
                 }
 
@@ -248,6 +247,17 @@
         {
             return statusCode == HttpStatusCode.BadGateway || statusCode == HttpStatusCode.GatewayTimeout
                                                            || statusCode == HttpStatusCode.RequestTimeout;
+        }
+
+        public string GetDonationLinks()
+        {
+            var stringBuilder = new StringBuilder();
+
+            stringBuilder.AppendLine($"Donate BitcoinCash - {foldingBotSettings.BitcoinCashAddress}");
+            stringBuilder.AppendLine($"Donate FLDCH or another CashToken - {foldingBotSettings.CashTokensAddress}");
+            stringBuilder.AppendLine($"Visit to learn other ways to donate - {foldingBotSettings.DonationUrl}");
+
+            return stringBuilder.ToString();
         }
     }
 }

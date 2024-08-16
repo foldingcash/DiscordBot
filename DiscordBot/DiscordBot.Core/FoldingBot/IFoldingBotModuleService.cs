@@ -10,7 +10,7 @@
         string ChangeDistroDate(DateTime date);
 
         string GetDistributionAnnouncement();
-
+        string GetDonationLinks();
         string GetFoldingAtHomeUrl();
 
         string GetHomeUrl();

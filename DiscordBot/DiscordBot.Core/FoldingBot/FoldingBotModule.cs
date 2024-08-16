@@ -71,6 +71,13 @@
             return Reply(service.GetNextDistributionDate());
         }
 
+        [Command("donate")]
+        [Summary("Learn how to donate to this project")]
+        public Task GetDonationLinks()
+        {
+            return Reply(service.GetDonationLinks());
+        }
+
         [Command("user", RunMode = RunMode.Async)]
         [Usage("{address}")]
         [Summary("Get your stats for the next distribution based on your address")]

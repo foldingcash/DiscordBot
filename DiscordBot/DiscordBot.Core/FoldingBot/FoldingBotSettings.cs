@@ -15,5 +15,9 @@
         public string Guild { get; set; }
 
         public string HomeUrl { get; set; }
+
+        public string BitcoinCashAddress { get; set; }
+        public string CashTokensAddress { get; set; }
+        public string DonationUrl { get; set; }
     }
 }
