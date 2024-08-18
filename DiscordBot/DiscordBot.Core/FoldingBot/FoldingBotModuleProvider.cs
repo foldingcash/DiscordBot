@@ -23,6 +23,8 @@
 
         private Func<string, Task> reply = message => Task.CompletedTask;
 
+        private const string ApiDateFormat = "MM/dd/yyyy";
+
         public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger,
                                         IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor, IFoldingBotConfigurationService foldingBotConfigurationService)
         {
@@ -93,7 +95,7 @@
             var today = DateTime.UtcNow;
             var startDate = new DateTime(today.Year, today.Month, 1);
             var endDate = today.Day == 1 ? today : today.AddDays(-1);
-            var distroResponse = await CallApi<DistroResponse>($"v1/GetDistro?startDate={startDate}&endDate={endDate}&amount=10000&includeFoldingUserTypes=8");
+            var distroResponse = await CallApi<DistroResponse>($"v1/GetDistro?startDate={startDate.ToString(ApiDateFormat)}&endDate={endDate.ToString(ApiDateFormat)}&amount=10000&includeFoldingUserTypes=8");
 
             if (distroResponse == default)
             {
@@ -267,7 +269,7 @@
             var today = DateTime.UtcNow;
             var startDate = new DateTime(today.Year, today.Month, 1);
             var endDate = today.Day == 1 ? today : today.AddDays(-1);
-            var distroResponse = await CallApi<DistroResponse>($"v1/GetDistro?startDate={startDate}&endDate={endDate}&amount=10000&includeFoldingUserTypes=8");
+            var distroResponse = await CallApi<DistroResponse>($"v1/GetDistro?startDate={startDate.ToString(ApiDateFormat)}&endDate={endDate.ToString(ApiDateFormat)}&amount=10000&includeFoldingUserTypes=8");
 
             if (distroResponse == default)
             {
@@ -296,7 +298,7 @@
             var today = DateTime.UtcNow;
             var startDate = new DateTime(today.Year, today.Month, 1);
             var endDate = today.Day == 1 ? today : today.AddDays(-1);
-            var distroResponse = await CallApi<DistroResponse>($"v1/GetDistro?startDate={startDate}&endDate={endDate}&amount=10000&includeFoldingUserTypes=8");
+            var distroResponse = await CallApi<DistroResponse>($"v1/GetDistro?startDate={startDate.ToString(ApiDateFormat)}&endDate={endDate.ToString(ApiDateFormat)}&amount=10000&includeFoldingUserTypes=8");
 
             if (distroResponse == default)
             {
