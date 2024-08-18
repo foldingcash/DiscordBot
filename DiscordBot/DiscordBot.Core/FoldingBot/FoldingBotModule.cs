@@ -80,18 +80,32 @@
 
         [Command("user", RunMode = RunMode.Async)]
         [Usage("{address}")]
-        [Summary("Get your stats for the next distribution based on your address")]
-        public async Task GetUserStats(string bitcoinAddress)
+        [Summary("Get your stats so far this month based on your cashTokens address")]
+        public async Task GetUserStats(string cashTokensAddress)
         {
-            await ReplyAsyncMode(async () => await service.GetUserStats(bitcoinAddress));
+            await ReplyAsyncMode(() => service.GetUserStats(cashTokensAddress));
         }
 
         [Command("lookup", RunMode = RunMode.Async)]
         [Usage("{search criteria}")]
-        [Summary("Helps to find yourself, not case sensitive and searches the start and end for a match")]
+        [Summary("Helps to find yourself, not case sensitive and searches the start and end of usernames for a match")]
         public async Task LookupUser([Remainder] string searchCriteria)
         {
-            await ReplyAsyncMode(async () => await service.LookupUser(searchCriteria));
+            await ReplyAsyncMode(() => service.LookupUser(searchCriteria));
+        }
+
+        [Command("top", RunMode = RunMode.Async)]
+        [Summary("Show the top ten users that meet the FoldingCash requirements")]
+        public async Task GetTopUsers()
+        {
+            await ReplyAsyncMode(() => service.GetTopUsers());
+        }
+
+        [Command("network", RunMode = RunMode.Async)]
+        [Summary("Show the FoldingCash network stats")]
+        public async Task GetNetworkStats()
+        {
+            await ReplyAsyncMode(() => service.GetNetworkStats());
         }
     }
 }
