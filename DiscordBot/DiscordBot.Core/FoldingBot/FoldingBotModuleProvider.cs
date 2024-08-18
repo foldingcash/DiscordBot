@@ -88,35 +88,37 @@
             return $"The next distribution is {distributionDate.ToShortDateString()}";
         }
 
-        public async Task<string> GetUserStats(string bitcoinAddress)
+        public async Task<string> GetUserStats(string cashTokensAddress)
         {
-            var distroResponse = await CallApi<DistroResponse>("/v1/GetDistro/All");
+            var today = DateTime.UtcNow;
+            var startDate = new DateTime(today.Year, today.Month, 1);
+            var endDate = today.Day == 1 ? today : today.AddDays(-1);
+            var distroResponse = await CallApi<DistroResponse>($"v1/GetDistro?startDate={startDate}&endDate={endDate}&amount=10000&includeFoldingUserTypes=8");
 
             if (distroResponse == default)
             {
                 return "The api is down :( try again later";
             }
 
-            DistroUser distroUser = distroResponse.Distro.FirstOrDefault(user => user.BitcoinAddress == bitcoinAddress);
+            DistroUser distroUser = distroResponse.Distro.FirstOrDefault(user => user.CashTokensAddress == cashTokensAddress);
 
-            if (distroUser is null)
+            if (distroUser == default)
             {
                 return "We were unable to find your bitcoin address. Ensure the address is correct and try again.";
             }
 
             var stringBuilder = new StringBuilder();
 
-            stringBuilder.AppendLine($"Results for: {distroUser.BitcoinAddress}");
+            stringBuilder.AppendLine($"Results for: {distroUser.CashTokensAddress}");
             stringBuilder.AppendLine($"\tPoints gained: {distroUser.PointsGained}");
             stringBuilder.AppendLine($"\tWork units gained: {distroUser.WorkUnitsGained}");
-            stringBuilder.AppendLine($"\tReceiving amount: {distroUser.Amount}");
 
             return stringBuilder.ToString();
         }
 
         public async Task<string> LookupUser(string searchCriteria)
         {
-            var membersResponse = await CallApi<MembersResponse>("/v1/GetMembers");
+            var membersResponse = await CallApi<MembersResponse>("v1/GetMembers/All");
 
             if (membersResponse == default)
             {
@@ -256,6 +258,60 @@
             stringBuilder.AppendLine($"Donate BitcoinCash - {foldingBotSettings.BitcoinCashAddress}");
             stringBuilder.AppendLine($"Donate FLDCH or another CashToken - {foldingBotSettings.CashTokensAddress}");
             stringBuilder.AppendLine($"Visit to learn other ways to donate - {foldingBotSettings.DonationUrl}");
+
+            return stringBuilder.ToString();
+        }
+
+        public async Task<string> GetNetworkStats()
+        {
+            var today = DateTime.UtcNow;
+            var startDate = new DateTime(today.Year, today.Month, 1);
+            var endDate = today.Day == 1 ? today : today.AddDays(-1);
+            var distroResponse = await CallApi<DistroResponse>($"v1/GetDistro?startDate={startDate}&endDate={endDate}&amount=10000&includeFoldingUserTypes=8");
+
+            if (distroResponse == default)
+            {
+                return "The api is down :( try again later";
+            }
+
+            var stringBuilder = new StringBuilder();
+
+            if (distroResponse.DistroCount == 1) 
+            {
+                stringBuilder.AppendLine($"There is {distroResponse.DistroCount} folder this month folding for FoldingCash");
+            }
+            else
+            {
+                stringBuilder.AppendLine($"There are {distroResponse.DistroCount} folders this month folding for FoldingCash");
+            }
+
+            stringBuilder.AppendLine($"We have folded a total of {distroResponse.TotalPoints} points");
+            stringBuilder.AppendLine($"We have folded a total of {distroResponse.TotalWorkUnits} work units");
+
+            return stringBuilder.ToString();
+        }
+
+        public async Task<string> GetTopUsers()
+        {
+            var today = DateTime.UtcNow;
+            var startDate = new DateTime(today.Year, today.Month, 1);
+            var endDate = today.Day == 1 ? today : today.AddDays(-1);
+            var distroResponse = await CallApi<DistroResponse>($"v1/GetDistro?startDate={startDate}&endDate={endDate}&amount=10000&includeFoldingUserTypes=8");
+
+            if (distroResponse == default)
+            {
+                return "The api is down :( try again later";
+            }
+
+            var stringBuilder = new StringBuilder();
+
+            stringBuilder.AppendLine("The top 10 users are:");
+
+            var orderedUsers = distroResponse.Distro.OrderByDescending(u => u.PointsGained).Take(10);
+            foreach (var user in orderedUsers)
+            {
+                stringBuilder.AppendLine($"\t{user.CashTokensAddress} : {user.PointsGained}");
+            }
 
             return stringBuilder.ToString();
         }

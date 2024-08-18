@@ -16,5 +16,8 @@
 
         [DataMember(Name = "workUnitsGained")]
         public long WorkUnitsGained { get; set; }
+
+        [DataMember(Name = "cashTokensAddress")]
+        public string CashTokensAddress { get; set; }
     }
 }
