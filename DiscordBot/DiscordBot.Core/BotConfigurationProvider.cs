@@ -20,6 +20,10 @@ namespace DiscordBot.Core
 
         public Task AddDisabledCommands(string commandName)
         {
+            if (configuration.DisabledCommands.Contains(commandName))
+            {
+                return Task.CompletedTask;
+            }
             configuration.DisabledCommands.Add(commandName);
             return WriteConfiguration();
         }
@@ -31,15 +35,17 @@ namespace DiscordBot.Core
 
         public async Task ReadConfiguration()
         {
-            T configuration;
-            if (!File.Exists(ConfigurationPath))
-            {
-                configuration = new T();
-            }
-            else
+            T configuration = new T();
+            if (File.Exists(ConfigurationPath))
             {
                 using var read = File.OpenRead(ConfigurationPath);
-                configuration = await JsonSerializer.DeserializeAsync<T>(read);
+                using var reader = new StreamReader(ConfigurationPath);
+                var contents = await reader.ReadToEndAsync();
+                if (!string.IsNullOrWhiteSpace(contents))
+                {
+                    read.Position = 0;
+                    configuration = await JsonSerializer.DeserializeAsync<T>(read);
+                }
             }
 
             this.configuration = configuration;
@@ -53,8 +59,14 @@ namespace DiscordBot.Core
 
         protected async Task WriteConfiguration()
         {
-            using var write = File.OpenWrite(ConfigurationPath);
-            await JsonSerializer.SerializeAsync(write, configuration);
+            using var memory = new MemoryStream();
+            await JsonSerializer.SerializeAsync(memory, configuration);
+            memory.Position = 0;
+            using var reader = new StreamReader(memory);
+
+            var data = await reader.ReadToEndAsync();
+
+            await File.WriteAllTextAsync(ConfigurationPath, data);
         }
     }
 }
