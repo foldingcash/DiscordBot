@@ -120,9 +120,8 @@
             var builder = new StringBuilder();
 
             builder.AppendLine(
-                "To use me, tag me or tell me a command and provide additional information when needed.");
+                "To use me, tag me with a command; provide additional information when needed.");
             builder.AppendLine();
-            builder.AppendLine("Usage: !{command} {data}");
             builder.AppendLine($"Usage: @{settings.BotName} {{command}} {{data}}");
             builder.AppendLine();
             builder.AppendLine("Commands -");
