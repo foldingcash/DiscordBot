@@ -24,5 +24,5 @@ namespace DiscordBot.Core.FoldingBot
             configuration.DistroDate = date;
             return WriteConfiguration();
         }
-    }    
+    }
 }

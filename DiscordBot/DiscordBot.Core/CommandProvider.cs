@@ -1,19 +1,16 @@
 ﻿namespace DiscordBot.Core
 {
+    using Discord.Commands;
+    using DiscordBot.Core.Attributes;
+    using DiscordBot.Core.FoldingBot;
+    using DiscordBot.Core.TestingBot;
+    using Microsoft.Extensions.Hosting;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
     using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
-
-    using Discord.Commands;
-
-    using DiscordBot.Core.Attributes;
-    using DiscordBot.Core.FoldingBot;
-    using DiscordBot.Core.TestingBot;
-
-    using Microsoft.Extensions.Hosting;
-    using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Options;
 
     public class CommandProvider : ICommandService
     {
@@ -106,7 +103,7 @@
 
         public IEnumerable<CommandInfo> GetCommands(SocketCommandContext context)
         {
-            if(IsAdminDirectMessage(context))
+            if (IsAdminDirectMessage(context))
             {
                 return innerService.Commands.Where(command =>
                     command.Attributes.All(attribute =>

@@ -7,7 +7,7 @@
         public string AnnounceChannel { get; set; }
 
         public string BotChannel { get; set; }
-        
+
         public string FoldingApiUri { get; set; }
 
         public string FoldingAtHomeUrl { get; set; }

@@ -1,17 +1,15 @@
 ﻿namespace DiscordBot.Core
 {
+    using Discord;
+    using Discord.Commands;
+    using Discord.WebSocket;
+    using Microsoft.Extensions.Hosting;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
     using System;
     using System.Diagnostics;
     using System.Threading;
     using System.Threading.Tasks;
-
-    using Discord;
-    using Discord.Commands;
-    using Discord.WebSocket;
-
-    using Microsoft.Extensions.Hosting;
-    using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Options;
 
     public class Bot : IHostedService
     {

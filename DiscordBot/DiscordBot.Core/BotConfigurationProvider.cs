@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace DiscordBot.Core
 {
-    public class BotConfigurationProvider<T> : IBotConfigurationService where T: BotConfiguration, new()
+    public class BotConfigurationProvider<T> : IBotConfigurationService where T : BotConfiguration, new()
     {
         private readonly IOptionsMonitor<BotSettings> botSettingsMonitor;
         protected T configuration;

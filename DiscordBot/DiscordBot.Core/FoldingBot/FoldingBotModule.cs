@@ -1,14 +1,11 @@
 ﻿namespace DiscordBot.Core.FoldingBot
 {
-    using System;
-    using System.Threading.Tasks;
-
     using Discord.Commands;
-
     using DiscordBot.Core.Attributes;
-
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
+    using System;
+    using System.Threading.Tasks;
 
     internal class FoldingBotModule : BotModule
     {

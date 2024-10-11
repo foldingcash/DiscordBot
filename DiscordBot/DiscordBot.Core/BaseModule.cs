@@ -1,17 +1,14 @@
 ﻿namespace DiscordBot.Core
 {
+    using Discord.Commands;
+    using DiscordBot.Core.Attributes;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
     using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Text;
     using System.Threading.Tasks;
-
-    using Discord.Commands;
-
-    using DiscordBot.Core.Attributes;
-
-    using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Options;
 
     internal class BaseModule : BotModule
     {
