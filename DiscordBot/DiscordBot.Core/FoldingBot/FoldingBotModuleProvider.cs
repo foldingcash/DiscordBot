@@ -1,5 +1,8 @@
 ﻿namespace DiscordBot.Core.FoldingBot
 {
+    using DiscordBot.Core.FoldingBot.Models;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
     using System;
     using System.Collections.Generic;
     using System.IO;
@@ -9,11 +12,6 @@
     using System.Runtime.Serialization.Json;
     using System.Text;
     using System.Threading.Tasks;
-
-    using DiscordBot.Core.FoldingBot.Models;
-
-    using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Options;
 
     public class FoldingBotModuleProvider : IFoldingBotModuleService
     {
@@ -92,10 +90,7 @@
 
         public async Task<string> GetUserStats(string cashTokensAddress)
         {
-            var today = DateTime.UtcNow;
-            var startDate = new DateTime(today.Year, today.Month, 1);
-            var endDate = today.Day == 1 ? today : today.AddDays(-1);
-            var distroResponse = await CallApi<DistroResponse>($"v1/GetDistro?startDate={startDate.ToString(ApiDateFormat)}&endDate={endDate.ToString(ApiDateFormat)}&amount=10000&includeFoldingUserTypes=8");
+            var distroResponse = await GetCurrentMonthDistro();
 
             if (distroResponse == default)
             {
@@ -157,7 +152,7 @@
                 var getMemberStatsPath = new Uri(relativePath, UriKind.Relative);
                 var requestUri = new Uri(foldingApiUri, getMemberStatsPath);
 
-                var serializer = new DataContractJsonSerializer(typeof (T));
+                var serializer = new DataContractJsonSerializer(typeof(T));
 
                 using var client = new HttpClient();
 
@@ -266,10 +261,7 @@
 
         public async Task<string> GetNetworkStats()
         {
-            var today = DateTime.UtcNow;
-            var startDate = new DateTime(today.Year, today.Month, 1);
-            var endDate = today.Day == 1 ? today : today.AddDays(-1);
-            var distroResponse = await CallApi<DistroResponse>($"v1/GetDistro?startDate={startDate.ToString(ApiDateFormat)}&endDate={endDate.ToString(ApiDateFormat)}&amount=10000&includeFoldingUserTypes=8");
+            var distroResponse = await GetCurrentMonthDistro();
 
             if (distroResponse == default)
             {
@@ -278,7 +270,7 @@
 
             var stringBuilder = new StringBuilder();
 
-            if (distroResponse.DistroCount == 1) 
+            if (distroResponse.DistroCount == 1)
             {
                 stringBuilder.AppendLine($"There is {distroResponse.DistroCount} folder this month folding for FoldingCash");
             }
@@ -295,10 +287,7 @@
 
         public async Task<string> GetTopUsers()
         {
-            var today = DateTime.UtcNow;
-            var startDate = new DateTime(today.Year, today.Month, 1);
-            var endDate = today.Day == 1 ? today : today.AddDays(-1);
-            var distroResponse = await CallApi<DistroResponse>($"v1/GetDistro?startDate={startDate.ToString(ApiDateFormat)}&endDate={endDate.ToString(ApiDateFormat)}&amount=10000&includeFoldingUserTypes=8");
+            var distroResponse = await GetCurrentMonthDistro();
 
             if (distroResponse == default)
             {
@@ -307,15 +296,25 @@
 
             var stringBuilder = new StringBuilder();
 
-            stringBuilder.AppendLine("The top 10 users are:");
+            var count = Math.Min(distroResponse.DistroCount.Value, 10);
+            stringBuilder.AppendLine($"The top {count} users this month are:");
 
-            var orderedUsers = distroResponse.Distro.OrderByDescending(u => u.PointsGained).Take(10);
+            var orderedUsers = distroResponse.Distro.OrderByDescending(u => u.PointsGained).Take(count);
             foreach (var user in orderedUsers)
             {
-                stringBuilder.AppendLine($"\t{user.CashTokensAddress} : {user.PointsGained}");
+                stringBuilder.AppendLine($"\t{user.CashTokensAddress} : {user.PointsGained} points : {user.Amount}%");
             }
 
             return stringBuilder.ToString();
+        }
+
+        private async Task<DistroResponse> GetCurrentMonthDistro()
+        {
+            var today = DateTime.UtcNow;
+            var startDate = new DateTime(today.Year, today.Month, 1);
+            var endDate = today.Day == 1 ? today : today.AddDays(-1);
+            var distroResponse = await CallApi<DistroResponse>($"v1/GetDistro?startDate={startDate.ToString(ApiDateFormat)}&endDate={endDate.ToString(ApiDateFormat)}&amount=100&includeFoldingUserTypes=8");
+            return distroResponse;
         }
     }
 }
