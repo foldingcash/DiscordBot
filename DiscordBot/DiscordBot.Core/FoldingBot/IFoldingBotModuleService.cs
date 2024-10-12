@@ -10,13 +10,19 @@
         string ChangeDistroDate(DateTime date);
 
         string GetDistributionAnnouncement();
+
         string GetDonationLinks();
+
         string GetFoldingAtHomeUrl();
 
         string GetHomeUrl();
+
         Task<string> GetNetworkStats();
+
         string GetNextDistributionDate();
+
         Task<string> GetTopUsers();
+
         Task<string> GetUserStats(string bitcoinAddress);
 
         Task<string> LookupUser(string searchCriteria);

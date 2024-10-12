@@ -1,8 +1,7 @@
 ﻿namespace DiscordBot.Console
 {
-    using DiscordBot.Core;
-    using DiscordBot.Core.FoldingBot;
-
+    using Core;
+    using Core.FoldingBot;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
 
@@ -26,7 +25,8 @@
                     .AddSingleton<IFoldingBotModuleService, FoldingBotModuleProvider>()
                     .Configure<FoldingBotSettings>(context.Configuration.GetSection("AppSettings"))
                     .AddSingleton<IFoldingBotConfigurationService, FoldingBotConfigurationProvider>()
-                    .AddSingleton<IBotConfigurationService>(provider => provider.GetRequiredService<IFoldingBotConfigurationService>());
+                    .AddSingleton<IBotConfigurationService>(provider =>
+                        provider.GetRequiredService<IFoldingBotConfigurationService>());
             });
         }
     }

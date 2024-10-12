@@ -1,21 +1,23 @@
 ﻿namespace DiscordBot.Core
 {
-    using Discord.Commands;
-    using DiscordBot.Core.Attributes;
-    using DiscordBot.Core.FoldingBot;
-    using DiscordBot.Core.TestingBot;
-    using Microsoft.Extensions.Hosting;
-    using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Options;
     using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
+    using Attributes;
+    using Discord.Commands;
+    using FoldingBot;
+    using Microsoft.Extensions.Hosting;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
+    using TestingBot;
 
     public class CommandProvider : ICommandService
     {
-        private readonly IHostEnvironment environment;
         private readonly IBotConfigurationService botConfigurationService;
+
+        private readonly IHostEnvironment environment;
+
         private readonly IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor;
 
         private readonly CommandService innerService;
@@ -25,7 +27,8 @@
         private readonly IServiceProvider services;
 
         public CommandProvider(ILogger<CommandProvider> logger, IServiceProvider services,
-                               IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor, IHostEnvironment environment, IBotConfigurationService botConfigurationService)
+            IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor, IHostEnvironment environment,
+            IBotConfigurationService botConfigurationService)
         {
             innerService = new CommandService(new CommandServiceConfig());
 
@@ -36,7 +39,8 @@
             this.botConfigurationService = botConfigurationService;
         }
 
-        private FoldingBotSettings foldingBotSettings => foldingBotSettingsMonitor?.CurrentValue ?? new FoldingBotSettings();
+        private FoldingBotSettings foldingBotSettings =>
+            foldingBotSettingsMonitor?.CurrentValue ?? new FoldingBotSettings();
 
         public async Task AddModulesAsync()
         {
@@ -98,7 +102,7 @@
             }
 
             return await defaultCommand.ExecuteAsync(commandContext, Enumerable.Empty<object>(),
-                       Enumerable.Empty<object>(), services);
+                Enumerable.Empty<object>(), services);
         }
 
         public IEnumerable<CommandInfo> GetCommands(SocketCommandContext context)
@@ -111,24 +115,24 @@
             }
 
             return innerService.Commands
-                .Where(command =>
-                    command.Attributes.All(attribute =>
-                        !(attribute is DefaultAttribute)))
-                .Where(command =>
-                    command.Attributes.All(attribute =>
-                        !(attribute is HiddenAttribute)))
-                .Where(command =>
-                    command.Attributes.All(attribute =>
-                        !(attribute is DevelopmentAttribute)))
-                .Where(command =>
-                    command.Attributes.All(attribute =>
-                        !(attribute is DeprecatedAttribute)))
-                .Where(command =>
-                    command.Attributes.All(attribute =>
-                        !(attribute is AdminOnlyAttribute)))
-                .Where(command =>
-                    !botConfigurationService.DisabledCommandsContains(
-                        command.Name));
+                               .Where(command =>
+                                   command.Attributes.All(attribute =>
+                                       !(attribute is DefaultAttribute)))
+                               .Where(command =>
+                                   command.Attributes.All(attribute =>
+                                       !(attribute is HiddenAttribute)))
+                               .Where(command =>
+                                   command.Attributes.All(attribute =>
+                                       !(attribute is DevelopmentAttribute)))
+                               .Where(command =>
+                                   command.Attributes.All(attribute =>
+                                       !(attribute is DeprecatedAttribute)))
+                               .Where(command =>
+                                   command.Attributes.All(attribute =>
+                                       !(attribute is AdminOnlyAttribute)))
+                               .Where(command =>
+                                   !botConfigurationService.DisabledCommandsContains(
+                                       command.Name));
         }
 
         private string GetBotChannel()
@@ -136,16 +140,16 @@
             return foldingBotSettings.BotChannel;
         }
 
-        private bool IsAdminRequesting(SocketCommandContext commandContext)
-        {
-            return string.Equals(foldingBotSettings.AdminUser, commandContext.Message.Author.Username,
-                StringComparison.OrdinalIgnoreCase);
-        }
-
         private bool IsAdminDirectMessage(SocketCommandContext commandContext)
         {
             return string.Equals(foldingBotSettings.AdminUser, commandContext.Message.Author.Username,
                 StringComparison.OrdinalIgnoreCase) && commandContext.IsPrivate;
+        }
+
+        private bool IsAdminRequesting(SocketCommandContext commandContext)
+        {
+            return string.Equals(foldingBotSettings.AdminUser, commandContext.Message.Author.Username,
+                StringComparison.OrdinalIgnoreCase);
         }
     }
 }

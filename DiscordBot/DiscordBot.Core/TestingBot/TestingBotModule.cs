@@ -1,9 +1,9 @@
 ﻿namespace DiscordBot.Core.TestingBot
 {
-    using Discord.Commands;
-    using DiscordBot.Core.Attributes;
-    using Microsoft.Extensions.Logging;
     using System.Threading.Tasks;
+    using Attributes;
+    using Discord.Commands;
+    using Microsoft.Extensions.Logging;
 
     internal class TestingBotModule : BotModule
     {

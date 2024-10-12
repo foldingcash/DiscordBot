@@ -1,12 +1,16 @@
-﻿using Microsoft.Extensions.Options;
-using System;
-using System.Threading.Tasks;
-
-namespace DiscordBot.Core.FoldingBot
+﻿namespace DiscordBot.Core.FoldingBot
 {
-    public class FoldingBotConfigurationProvider : BotConfigurationProvider<FoldingBotConfiguration>, IFoldingBotConfigurationService
+    using System;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Options;
+
+    public class FoldingBotConfigurationProvider : BotConfigurationProvider<FoldingBotConfiguration>,
+        IFoldingBotConfigurationService
     {
-        public FoldingBotConfigurationProvider(IOptionsMonitor<BotSettings> botSettingsMonitor) : base(botSettingsMonitor) { }
+        public FoldingBotConfigurationProvider(IOptionsMonitor<BotSettings> botSettingsMonitor) : base(
+            botSettingsMonitor)
+        {
+        }
 
         public Task ClearDistroDate()
         {

@@ -1,8 +1,5 @@
 ﻿namespace DiscordBot.Core.FoldingBot
 {
-    using DiscordBot.Core.FoldingBot.Models;
-    using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Options;
     using System;
     using System.Collections.Generic;
     using System.IO;
@@ -12,26 +9,33 @@
     using System.Runtime.Serialization.Json;
     using System.Text;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
+    using Models;
 
     public class FoldingBotModuleProvider : IFoldingBotModuleService
     {
-        private readonly IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor;
+        private const string ApiDateFormat = "MM/dd/yyyy";
+
         private readonly IFoldingBotConfigurationService foldingBotConfigurationService;
+
+        private readonly IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor;
+
         private readonly ILogger<FoldingBotModuleProvider> logger;
 
         private Func<string, Task> reply = message => Task.CompletedTask;
 
-        private const string ApiDateFormat = "MM/dd/yyyy";
-
         public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger,
-                                        IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor, IFoldingBotConfigurationService foldingBotConfigurationService)
+            IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor,
+            IFoldingBotConfigurationService foldingBotConfigurationService)
         {
             this.logger = logger;
             this.foldingBotSettingsMonitor = foldingBotSettingsMonitor;
             this.foldingBotConfigurationService = foldingBotConfigurationService;
         }
 
-        private FoldingBotSettings foldingBotSettings => foldingBotSettingsMonitor?.CurrentValue ?? new FoldingBotSettings();
+        private FoldingBotSettings FoldingBotSettings =>
+            foldingBotSettingsMonitor?.CurrentValue ?? new FoldingBotSettings();
 
         public Func<string, Task> Reply
         {
@@ -46,7 +50,7 @@
             }
 
             foldingBotConfigurationService.UpdateDistroDate(date.Date);
-            return $"New distro date is {foldingBotConfigurationService.GetDistroDate().Value.ToShortDateString()}";
+            return $"New distro date is {foldingBotConfigurationService.GetDistroDate()?.ToShortDateString()}";
         }
 
         public string GetDistributionAnnouncement()
@@ -55,14 +59,53 @@
             return $"Start folding now! The next distribution is {distroDate.ToShortDateString()}.";
         }
 
+        public string GetDonationLinks()
+        {
+            var stringBuilder = new StringBuilder();
+
+            stringBuilder.AppendLine($"Donate BitcoinCash - {FoldingBotSettings.BitcoinCashAddress}");
+            stringBuilder.AppendLine($"Donate FLDCH or another CashToken - {FoldingBotSettings.CashTokensAddress}");
+            stringBuilder.AppendLine($"Visit to learn other ways to donate - {FoldingBotSettings.DonationUrl}");
+
+            return stringBuilder.ToString();
+        }
+
         public string GetFoldingAtHomeUrl()
         {
-            return $"Visit {foldingBotSettings.FoldingAtHomeUrl} to download folding@home";
+            return $"Visit {FoldingBotSettings.FoldingAtHomeUrl} to download folding@home";
         }
 
         public string GetHomeUrl()
         {
-            return $"Visit {foldingBotSettings.HomeUrl} to learn more about this project";
+            return $"Visit {FoldingBotSettings.HomeUrl} to learn more about this project";
+        }
+
+        public async Task<string> GetNetworkStats()
+        {
+            DistroResponse distroResponse = await GetCurrentMonthDistro();
+
+            if (distroResponse == default)
+            {
+                return "The api is down :( try again later";
+            }
+
+            var stringBuilder = new StringBuilder();
+
+            if (distroResponse.DistroCount == 1)
+            {
+                stringBuilder.AppendLine(
+                    $"There is {distroResponse.DistroCount} folder this month folding for FoldingCash");
+            }
+            else
+            {
+                stringBuilder.AppendLine(
+                    $"There are {distroResponse.DistroCount} folders this month folding for FoldingCash");
+            }
+
+            stringBuilder.AppendLine($"We have folded a total of {distroResponse.TotalPoints} points");
+            stringBuilder.AppendLine($"We have folded a total of {distroResponse.TotalWorkUnits} work units");
+
+            return stringBuilder.ToString();
         }
 
         public string GetNextDistributionDate()
@@ -88,16 +131,41 @@
             return $"The next distribution is {distributionDate.ToShortDateString()}";
         }
 
-        public async Task<string> GetUserStats(string cashTokensAddress)
+        public async Task<string> GetTopUsers()
         {
-            var distroResponse = await GetCurrentMonthDistro();
+            DistroResponse distroResponse = await GetCurrentMonthDistro();
 
             if (distroResponse == default)
             {
                 return "The api is down :( try again later";
             }
 
-            DistroUser distroUser = distroResponse.Distro.FirstOrDefault(user => user.CashTokensAddress == cashTokensAddress);
+            var stringBuilder = new StringBuilder();
+
+            int count = Math.Min(distroResponse.DistroCount.Value, 10);
+            stringBuilder.AppendLine($"The top {count} users this month are:");
+
+            IEnumerable<DistroUser> orderedUsers =
+                distroResponse.Distro.OrderByDescending(u => u.PointsGained).Take(count);
+            foreach (DistroUser user in orderedUsers)
+            {
+                stringBuilder.AppendLine($"\t{user.CashTokensAddress} : {user.PointsGained} points : {user.Amount}%");
+            }
+
+            return stringBuilder.ToString();
+        }
+
+        public async Task<string> GetUserStats(string cashTokensAddress)
+        {
+            DistroResponse distroResponse = await GetCurrentMonthDistro();
+
+            if (distroResponse == default)
+            {
+                return "The api is down :( try again later";
+            }
+
+            DistroUser distroUser =
+                distroResponse.Distro.FirstOrDefault(user => user.CashTokensAddress == cashTokensAddress);
 
             if (distroUser == default)
             {
@@ -148,11 +216,11 @@
         {
             try
             {
-                var foldingApiUri = new Uri(foldingBotSettings.FoldingApiUri, UriKind.Absolute);
+                var foldingApiUri = new Uri(FoldingBotSettings.FoldingApiUri, UriKind.Absolute);
                 var getMemberStatsPath = new Uri(relativePath, UriKind.Relative);
                 var requestUri = new Uri(foldingApiUri, getMemberStatsPath);
 
-                var serializer = new DataContractJsonSerializer(typeof(T));
+                var serializer = new DataContractJsonSerializer(typeof (T));
 
                 using var client = new HttpClient();
 
@@ -209,6 +277,16 @@
             }
         }
 
+        private async Task<DistroResponse> GetCurrentMonthDistro()
+        {
+            DateTime today = DateTime.UtcNow;
+            var startDate = new DateTime(today.Year, today.Month, 1);
+            DateTime endDate = today.Day == 1 ? today : today.AddDays(-1);
+            var distroResponse = await CallApi<DistroResponse>(
+                $"v1/GetDistro?startDate={startDate.ToString(ApiDateFormat)}&endDate={endDate.ToString(ApiDateFormat)}&amount=100&includeFoldingUserTypes=8");
+            return distroResponse;
+        }
+
         private DateTime GetDistributionDate()
         {
             DateTime now = DateTime.UtcNow.Date;
@@ -246,75 +324,6 @@
         {
             return statusCode == HttpStatusCode.BadGateway || statusCode == HttpStatusCode.GatewayTimeout
                                                            || statusCode == HttpStatusCode.RequestTimeout;
-        }
-
-        public string GetDonationLinks()
-        {
-            var stringBuilder = new StringBuilder();
-
-            stringBuilder.AppendLine($"Donate BitcoinCash - {foldingBotSettings.BitcoinCashAddress}");
-            stringBuilder.AppendLine($"Donate FLDCH or another CashToken - {foldingBotSettings.CashTokensAddress}");
-            stringBuilder.AppendLine($"Visit to learn other ways to donate - {foldingBotSettings.DonationUrl}");
-
-            return stringBuilder.ToString();
-        }
-
-        public async Task<string> GetNetworkStats()
-        {
-            var distroResponse = await GetCurrentMonthDistro();
-
-            if (distroResponse == default)
-            {
-                return "The api is down :( try again later";
-            }
-
-            var stringBuilder = new StringBuilder();
-
-            if (distroResponse.DistroCount == 1)
-            {
-                stringBuilder.AppendLine($"There is {distroResponse.DistroCount} folder this month folding for FoldingCash");
-            }
-            else
-            {
-                stringBuilder.AppendLine($"There are {distroResponse.DistroCount} folders this month folding for FoldingCash");
-            }
-
-            stringBuilder.AppendLine($"We have folded a total of {distroResponse.TotalPoints} points");
-            stringBuilder.AppendLine($"We have folded a total of {distroResponse.TotalWorkUnits} work units");
-
-            return stringBuilder.ToString();
-        }
-
-        public async Task<string> GetTopUsers()
-        {
-            var distroResponse = await GetCurrentMonthDistro();
-
-            if (distroResponse == default)
-            {
-                return "The api is down :( try again later";
-            }
-
-            var stringBuilder = new StringBuilder();
-
-            var count = Math.Min(distroResponse.DistroCount.Value, 10);
-            stringBuilder.AppendLine($"The top {count} users this month are:");
-
-            var orderedUsers = distroResponse.Distro.OrderByDescending(u => u.PointsGained).Take(count);
-            foreach (var user in orderedUsers)
-            {
-                stringBuilder.AppendLine($"\t{user.CashTokensAddress} : {user.PointsGained} points : {user.Amount}%");
-            }
-
-            return stringBuilder.ToString();
-        }
-
-        private async Task<DistroResponse> GetCurrentMonthDistro()
-        {
-            var today = DateTime.UtcNow;
-            var startDate = new DateTime(today.Year, today.Month, 1);
-            var endDate = today.Day == 1 ? today : today.AddDays(-1);
-            var distroResponse = await CallApi<DistroResponse>($"v1/GetDistro?startDate={startDate.ToString(ApiDateFormat)}&endDate={endDate.ToString(ApiDateFormat)}&amount=100&includeFoldingUserTypes=8");
-            return distroResponse;
         }
     }
 }
