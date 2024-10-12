@@ -142,7 +142,7 @@
 
             var stringBuilder = new StringBuilder();
 
-            int count = Math.Min(distroResponse.DistroCount.Value, 10);
+            int count = Math.Min(distroResponse.DistroCount ?? 0, 10);
             stringBuilder.AppendLine($"The top {count} users this month are:");
 
             IEnumerable<DistroUser> orderedUsers =
@@ -281,7 +281,7 @@
         {
             DateTime today = DateTime.UtcNow;
             var startDate = new DateTime(today.Year, today.Month, 1);
-            DateTime endDate = today.Day == 1 ? today : today.AddDays(-1);
+            DateTime endDate = today;
             var distroResponse = await CallApi<DistroResponse>(
                 $"v1/GetDistro?startDate={startDate.ToString(ApiDateFormat)}&endDate={endDate.ToString(ApiDateFormat)}&amount=100&includeFoldingUserTypes=8");
             return distroResponse;
