@@ -63,7 +63,7 @@
             if (client != null)
             {
                 await client.StopAsync();
-                client.Dispose();
+                await client.DisposeAsync();
                 client = null;
             }
         }

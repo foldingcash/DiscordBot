@@ -133,6 +133,14 @@
 
         public async Task<string> GetTopUsers()
         {
+            string ShortenAddress(string address)
+            {
+                const int length = 4;
+                string first = address.Substring(0, length);
+                string last = address.Substring(address.Length - length, length);
+                return $"{first}...{last}";
+            }
+
             DistroResponse distroResponse = await GetCurrentMonthDistro();
 
             if (distroResponse == default)
@@ -149,7 +157,8 @@
                 distroResponse.Distro.OrderByDescending(u => u.PointsGained).Take(count);
             foreach (DistroUser user in orderedUsers)
             {
-                stringBuilder.AppendLine($"\t{user.CashTokensAddress} : {user.PointsGained} points : {user.Amount}%");
+                stringBuilder.AppendLine(
+                    $"\t{ShortenAddress(user.CashTokensAddress)} : {user.PointsGained} points : {user.Amount}%");
             }
 
             return stringBuilder.ToString();
