@@ -4,19 +4,19 @@
     using System.Diagnostics;
     using System.Threading;
     using System.Threading.Tasks;
-
     using Discord;
     using Discord.Commands;
     using Discord.WebSocket;
-
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
 
     public class Bot : IHostedService
     {
-        private readonly IOptionsMonitor<BotSettings> botSettingsMonitor;
         private readonly IBotConfigurationService botConfigurationService;
+
+        private readonly IOptionsMonitor<BotSettings> botSettingsMonitor;
+
         private readonly ICommandService commandService;
 
         private readonly IHostEnvironment environment;
@@ -26,7 +26,7 @@
         private DiscordSocketClient client;
 
         public Bot(ICommandService commandService, ILogger<Bot> logger, IHostEnvironment environment,
-                   IOptionsMonitor<BotSettings> botSettingsMonitor, IBotConfigurationService botConfigurationService)
+            IOptionsMonitor<BotSettings> botSettingsMonitor, IBotConfigurationService botConfigurationService)
         {
             this.commandService = commandService;
             this.logger = logger;
@@ -63,7 +63,7 @@
             if (client != null)
             {
                 await client.StopAsync();
-                client.Dispose();
+                await client.DisposeAsync();
                 client = null;
             }
         }

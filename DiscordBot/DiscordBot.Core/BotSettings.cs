@@ -4,7 +4,8 @@
     {
         public string BotName { get; set; }
 
-        public string Token { get; set; }
         public string ConfigurationPath { get; set; }
+
+        public string Token { get; set; }
     }
 }

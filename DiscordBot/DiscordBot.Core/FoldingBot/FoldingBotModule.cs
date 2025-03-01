@@ -2,11 +2,8 @@
 {
     using System;
     using System.Threading.Tasks;
-
+    using Attributes;
     using Discord.Commands;
-
-    using DiscordBot.Core.Attributes;
-
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
 
@@ -19,7 +16,8 @@
         private readonly IFoldingBotModuleService service;
 
         public FoldingBotModule(IFoldingBotModuleService service, ILogger<FoldingBotModule> logger,
-                                IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor, IFoldingBotConfigurationService foldingBotConfigurationService)
+            IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor,
+            IFoldingBotConfigurationService foldingBotConfigurationService)
             : base(logger, foldingBotConfigurationService)
         {
             this.service = service;
@@ -38,7 +36,8 @@
         public async Task AnnounceUpcomingDistribution()
         {
             logger.LogDebug("Announcing the next distribution");
-            await Announce(service.GetDistributionAnnouncement(), foldingBotSettings.Guild, foldingBotSettings.AnnounceChannel);
+            await Announce(service.GetDistributionAnnouncement(), foldingBotSettings.Guild,
+                foldingBotSettings.AnnounceChannel);
         }
 
         [AdminOnly]
@@ -48,6 +47,13 @@
         public Task ChangeDistroDate(DateTime date)
         {
             return Reply(service.ChangeDistroDate(date));
+        }
+
+        [Command("donate")]
+        [Summary("Learn how to donate to this project")]
+        public Task GetDonationLinks()
+        {
+            return Reply(service.GetDonationLinks());
         }
 
         [Command("fah")]
@@ -64,6 +70,13 @@
             return Reply(service.GetHomeUrl());
         }
 
+        [Command("network", RunMode = RunMode.Async)]
+        [Summary("Show the FoldingCash network stats")]
+        public async Task GetNetworkStats()
+        {
+            await ReplyAsyncMode(() => service.GetNetworkStats());
+        }
+
         [Command("distribution")]
         [Summary("Get the date of our next distribution")]
         public Task GetNextDistributionDate()
@@ -71,11 +84,11 @@
             return Reply(service.GetNextDistributionDate());
         }
 
-        [Command("donate")]
-        [Summary("Learn how to donate to this project")]
-        public Task GetDonationLinks()
+        [Command("top", RunMode = RunMode.Async)]
+        [Summary("Show the top ten users that meet the FoldingCash requirements")]
+        public async Task GetTopUsers()
         {
-            return Reply(service.GetDonationLinks());
+            await ReplyAsyncMode(() => service.GetTopUsers());
         }
 
         [Command("user", RunMode = RunMode.Async)]
@@ -92,20 +105,6 @@
         public async Task LookupUser([Remainder] string searchCriteria)
         {
             await ReplyAsyncMode(() => service.LookupUser(searchCriteria));
-        }
-
-        [Command("top", RunMode = RunMode.Async)]
-        [Summary("Show the top ten users that meet the FoldingCash requirements")]
-        public async Task GetTopUsers()
-        {
-            await ReplyAsyncMode(() => service.GetTopUsers());
-        }
-
-        [Command("network", RunMode = RunMode.Async)]
-        [Summary("Show the FoldingCash network stats")]
-        public async Task GetNetworkStats()
-        {
-            await ReplyAsyncMode(() => service.GetNetworkStats());
         }
     }
 }

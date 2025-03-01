@@ -1,13 +1,14 @@
-﻿using Microsoft.Extensions.Options;
-using System.IO;
-using System.Text.Json;
-using System.Threading.Tasks;
-
-namespace DiscordBot.Core
+﻿namespace DiscordBot.Core
 {
-    public class BotConfigurationProvider<T> : IBotConfigurationService where T: BotConfiguration, new()
+    using System.IO;
+    using System.Text.Json;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Options;
+
+    public class BotConfigurationProvider<T> : IBotConfigurationService where T : BotConfiguration, new()
     {
         private readonly IOptionsMonitor<BotSettings> botSettingsMonitor;
+
         protected T configuration;
 
         public BotConfigurationProvider(IOptionsMonitor<BotSettings> botSettingsMonitor)
@@ -16,6 +17,7 @@ namespace DiscordBot.Core
         }
 
         private BotSettings BotSettings => botSettingsMonitor.CurrentValue;
+
         private string ConfigurationPath => BotSettings.ConfigurationPath;
 
         public Task AddDisabledCommands(string commandName)
@@ -24,6 +26,7 @@ namespace DiscordBot.Core
             {
                 return Task.CompletedTask;
             }
+
             configuration.DisabledCommands.Add(commandName);
             return WriteConfiguration();
         }
@@ -35,12 +38,12 @@ namespace DiscordBot.Core
 
         public async Task ReadConfiguration()
         {
-            T configuration = new T();
+            var configuration = new T();
             if (File.Exists(ConfigurationPath))
             {
-                using var read = File.OpenRead(ConfigurationPath);
+                using FileStream read = File.OpenRead(ConfigurationPath);
                 using var reader = new StreamReader(ConfigurationPath);
-                var contents = await reader.ReadToEndAsync();
+                string contents = await reader.ReadToEndAsync();
                 if (!string.IsNullOrWhiteSpace(contents))
                 {
                     read.Position = 0;
@@ -64,7 +67,7 @@ namespace DiscordBot.Core
             memory.Position = 0;
             using var reader = new StreamReader(memory);
 
-            var data = await reader.ReadToEndAsync();
+            string data = await reader.ReadToEndAsync();
 
             await File.WriteAllTextAsync(ConfigurationPath, data);
         }

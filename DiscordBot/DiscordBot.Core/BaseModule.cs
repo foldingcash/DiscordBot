@@ -5,24 +5,23 @@
     using System.Linq;
     using System.Text;
     using System.Threading.Tasks;
-
+    using Attributes;
     using Discord.Commands;
-
-    using DiscordBot.Core.Attributes;
-
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
 
     internal class BaseModule : BotModule
     {
+        private readonly IBotConfigurationService botConfigurationService;
+
         private readonly IOptionsMonitor<BotSettings> botSettingsMonitor;
 
         private readonly ICommandService commandService;
-        private readonly IBotConfigurationService botConfigurationService;
+
         private readonly ILogger logger;
 
         public BaseModule(ILogger<BaseModule> logger, IOptionsMonitor<BotSettings> botSettingsMonitor,
-                          ICommandService commandService, IBotConfigurationService botConfigurationService)
+            ICommandService commandService, IBotConfigurationService botConfigurationService)
             : base(logger, botConfigurationService)
         {
             this.logger = logger;
@@ -105,6 +104,24 @@
             await Reply(Usage(Context));
         }
 
+        private void AppendAttributeText(CommandInfo command, StringBuilder builder)
+        {
+            if (botConfigurationService.DisabledCommandsContains(command.Name))
+            {
+                builder.Append("(Disabled) ");
+            }
+
+            if (command.Attributes.Any(attribute => attribute is HiddenAttribute))
+            {
+                builder.Append("(Hidden) ");
+            }
+
+            if (command.Attributes.Any(attribute => attribute is AdminOnlyAttribute))
+            {
+                builder.Append("(Admin) ");
+            }
+        }
+
         private IEnumerable<CommandInfo> GetCommands(SocketCommandContext context)
         {
             List<CommandInfo> commands = commandService.GetCommands(context).ToList();
@@ -147,24 +164,6 @@
             }
 
             return builder.ToString();
-        }
-
-        private void AppendAttributeText(CommandInfo command, StringBuilder builder)
-        {
-            if (botConfigurationService.DisabledCommandsContains(command.Name))
-            {
-                builder.Append("(Disabled) ");
-            }
-
-            if (command.Attributes.Any(attribute => attribute is HiddenAttribute))
-            {
-                builder.Append("(Hidden) ");
-            }
-
-            if (command.Attributes.Any(attribute => attribute is AdminOnlyAttribute))
-            {
-                builder.Append("(Admin) ");
-            }
         }
     }
 }
