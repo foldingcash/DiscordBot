@@ -141,6 +141,11 @@
                 return $"{first}...{last}";
             }
 
+            decimal RoundAmount(decimal amount)
+            {
+                return Math.Round(amount, 2);
+            }
+
             DistroResponse distroResponse = await GetCurrentMonthDistro();
 
             if (distroResponse == default)
@@ -158,7 +163,7 @@
             foreach (DistroUser user in orderedUsers)
             {
                 stringBuilder.AppendLine(
-                    $"\t{ShortenAddress(user.CashTokensAddress)} : {user.PointsGained} points : {user.Amount}%");
+                    $"\t{ShortenAddress(user.CashTokensAddress)} : {user.PointsGained} points : {RoundAmount(user.Amount)}%");
             }
 
             return stringBuilder.ToString();
