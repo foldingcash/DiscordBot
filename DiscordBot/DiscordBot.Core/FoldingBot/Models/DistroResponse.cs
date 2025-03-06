@@ -13,8 +13,10 @@
         [DataMember(Name = "distroCount")]
         public int? DistroCount { get; set; }
 
+        public DateTime End => DateTime.Parse(EndDateTime);
+
         [DataMember(Name = "endDateTime")]
-        public DateTime End { get; set; }
+        public string EndDateTime { get; set; }
 
         [DataMember(Name = "errorCount")]
         public int? ErrorCount { get; set; }
@@ -25,8 +27,10 @@
         [DataMember(Name = "firstErrorCode")]
         public int FirstErrorCode { get; set; }
 
+        public DateTime Start => DateTime.Parse(StartDateTime);
+
         [DataMember(Name = "startDateTime")]
-        public DateTime Start { get; set; }
+        public string StartDateTime { get; set; }
 
         [DataMember(Name = "totalDistro")]
         public decimal? TotalDistro { get; set; }
