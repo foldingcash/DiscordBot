@@ -1,5 +1,6 @@
 ﻿namespace DiscordBot.Core.FoldingBot.Models
 {
+    using System;
     using System.Collections.Generic;
     using System.Runtime.Serialization;
 
@@ -12,6 +13,9 @@
         [DataMember(Name = "distroCount")]
         public int? DistroCount { get; set; }
 
+        [DataMember(Name = "endDateTime")]
+        public DateTime End { get; set; }
+
         [DataMember(Name = "errorCount")]
         public int? ErrorCount { get; set; }
 
@@ -20,6 +24,9 @@
 
         [DataMember(Name = "firstErrorCode")]
         public int FirstErrorCode { get; set; }
+
+        [DataMember(Name = "startDateTime")]
+        public DateTime Start { get; set; }
 
         [DataMember(Name = "totalDistro")]
         public decimal? TotalDistro { get; set; }
