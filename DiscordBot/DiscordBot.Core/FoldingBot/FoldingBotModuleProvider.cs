@@ -300,7 +300,8 @@
             }
         }
 
-        private async Task<DistroResponse> GetCurrentDistro()
+        private async Task<DistroResponse>
+            GetCurrentDistro()
         {
             DateTime now = DateTime.UtcNow;
             var startDate = new DateTime(now.Year, now.Month, 1);
