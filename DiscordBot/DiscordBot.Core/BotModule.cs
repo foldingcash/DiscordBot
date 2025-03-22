@@ -66,14 +66,23 @@
 
                 await ReplyAsync(await getMessage.Invoke());
 
-                await Context.Message.RemoveReactionAsync(hourglass, Context.Client.CurrentUser,
-                    RequestOptions.Default);
-
                 logger.LogInformation("Method Finished: {methodName}", methodName);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "There was an unhandled exception");
+                logger.LogError(ex, "There was an unhandled exception while replying");
+            }
+            finally
+            {
+                try
+                {
+                    await Context.Message.RemoveReactionAsync(hourglass, Context.Client.CurrentUser,
+                        RequestOptions.Default);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "There was an error removing the reaction");
+                }
             }
         }
 
