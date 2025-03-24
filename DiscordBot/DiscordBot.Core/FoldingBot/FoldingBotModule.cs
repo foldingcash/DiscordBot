@@ -99,6 +99,14 @@
             await ReplyAsyncMode(() => service.GetUserStats(cashTokensAddress));
         }
 
+        [AdminOnly]
+        [Command("health")]
+        [Summary("Check if FoldingCash services are alive")]
+        public async Task HealthCheck()
+        {
+            await ReplyAsyncMode(() => service.HealthCheck());
+        }
+
         [Command("lookup", RunMode = RunMode.Async)]
         [Usage("{search criteria}")]
         [Summary("Helps to find yourself, not case sensitive and searches the start and end of usernames for a match")]

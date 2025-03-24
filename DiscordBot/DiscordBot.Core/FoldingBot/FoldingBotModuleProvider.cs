@@ -200,6 +200,54 @@
             return builder.ToString();
         }
 
+        public async Task<string> HealthCheck()
+        {
+            try
+            {
+                var foldingApiUri = new Uri(FoldingBotSettings.FoldingApiUri, UriKind.Absolute);
+                var getMemberStatsPath = new Uri("health/details", UriKind.Relative);
+                var requestUri = new Uri(foldingApiUri, getMemberStatsPath);
+
+                var serializer = new DataContractJsonSerializer(typeof (HealthResponse));
+
+                using var client = new HttpClient();
+
+                logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
+
+                HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
+
+                logger.LogInformation("Finished GET from URI");
+
+                string responseContent = await httpResponse.Content.ReadAsStringAsync();
+
+                if (!httpResponse.IsSuccessStatusCode)
+                {
+                    logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
+                        httpResponse.StatusCode, responseContent);
+
+                    return "The bot is Healthy. The API is Unhealthy.";
+                }
+
+                logger.LogTrace("responseContent: {responseContent}", responseContent);
+
+                await using var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent));
+
+                var response = serializer.ReadObject(streamReader) as HealthResponse;
+
+                if (response is null)
+                {
+                    return "The bot is Healthy. The API is Unhealthy.";
+                }
+
+                return $"The bot is Healthy. The API is {response.Status}.";
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, "There was an exception");
+                return "The bot is Healthy. The API is Unhealthy.";
+            }
+        }
+
         public async Task<string> LookupUser(string searchCriteria)
         {
             var membersResponse = await CallApi<MembersResponse>("v1/GetMembers/All");
