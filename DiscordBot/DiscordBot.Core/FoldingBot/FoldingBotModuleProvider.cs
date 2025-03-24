@@ -300,7 +300,8 @@
             }
         }
 
-        private async Task<DistroResponse> GetCurrentDistro()
+        private async Task<DistroResponse>
+            GetCurrentDistro()
         {
             DateTime now = DateTime.UtcNow;
             var startDate = new DateTime(now.Year, now.Month, 1);
@@ -308,11 +309,13 @@
 
             if (now.Day < 3)
             {
+                await reply("This month's stats are not yet available...showing last month");
                 startDate = startDate.AddMonths(-1);
                 endDate = new DateTime(startDate.Year, startDate.Month,
                     DateTime.DaysInMonth(startDate.Year, startDate.Month));
             }
 
+            // 8 is a magic number for bitcoin cash users
             var distroResponse = await CallApi<DistroResponse>(
                 $"v1/GetDistro?startDate={startDate.ToString(ApiDateFormat)}&endDate={endDate.ToString(ApiDateFormat)}&amount=100&includeFoldingUserTypes=8");
             return distroResponse;

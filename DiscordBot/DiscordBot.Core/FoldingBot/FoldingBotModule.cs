@@ -27,7 +27,7 @@
             service.Reply = message => Reply(message, nameof(IFoldingBotModuleService));
         }
 
-        private FoldingBotSettings foldingBotSettings => foldingBotSettingsMonitor.CurrentValue;
+        private FoldingBotSettings FoldingBotSettings => foldingBotSettingsMonitor.CurrentValue;
 
         [AdminOnly]
         [Hidden]
@@ -36,8 +36,8 @@
         public async Task AnnounceUpcomingDistribution()
         {
             logger.LogDebug("Announcing the next distribution");
-            await Announce(service.GetDistributionAnnouncement(), foldingBotSettings.Guild,
-                foldingBotSettings.AnnounceChannel);
+            await Announce(service.GetDistributionAnnouncement(), FoldingBotSettings.Guild,
+                FoldingBotSettings.AnnounceChannel);
         }
 
         [AdminOnly]
