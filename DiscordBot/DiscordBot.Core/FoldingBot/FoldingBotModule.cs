@@ -15,10 +15,13 @@
 
         private readonly IFoldingBotModuleService service;
 
-        public FoldingBotModule(IFoldingBotModuleService service, ILogger<FoldingBotModule> logger,
+        public FoldingBotModule(ILogger<FoldingBotModule> logger,
             IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor,
-            IFoldingBotConfigurationService foldingBotConfigurationService)
-            : base(logger, foldingBotConfigurationService)
+            IOptionsMonitor<BotSettings> botSettingsMonitor,
+            IFoldingBotConfigurationService foldingBotConfigurationService,
+            IFoldingBotModuleService service
+        )
+            : base(logger, botSettingsMonitor, foldingBotConfigurationService)
         {
             this.service = service;
             this.logger = logger;
@@ -113,6 +116,14 @@
         public async Task LookupUser([Remainder] string searchCriteria)
         {
             await ReplyAsyncMode(() => service.LookupUser(searchCriteria));
+        }
+
+        [Command("verify")]
+        [Usage("{btc address} {signature} {cash tokens address}")]
+        [Summary("Verify yourself using your legacy Bitcoin address")]
+        public async Task VerifyUser(string bitcoinAddress, string signature, string cashTokensAddress)
+        {
+            await Task.Delay(0);
         }
     }
 }

@@ -21,8 +21,8 @@
         private readonly ILogger logger;
 
         public BaseModule(ILogger<BaseModule> logger, IOptionsMonitor<BotSettings> botSettingsMonitor,
-            ICommandService commandService, IBotConfigurationService botConfigurationService)
-            : base(logger, botConfigurationService)
+            IBotConfigurationService botConfigurationService, ICommandService commandService)
+            : base(logger, botSettingsMonitor, botConfigurationService)
         {
             this.logger = logger;
             this.botSettingsMonitor = botSettingsMonitor;
@@ -30,7 +30,7 @@
             this.botConfigurationService = botConfigurationService;
         }
 
-        private BotSettings settings => botSettingsMonitor.CurrentValue;
+        private BotSettings BotSettings => botSettingsMonitor.CurrentValue;
 
         [Hidden]
         [Command("bad bot")]
@@ -139,7 +139,7 @@
             builder.AppendLine(
                 "To use me, tag me with a command; provide additional information when needed.");
             builder.AppendLine();
-            builder.AppendLine($"Usage: @{settings.BotName} {{command}} {{data}}");
+            builder.AppendLine($"Usage: @{BotSettings.BotName} {{command}} {{data}}");
             builder.AppendLine();
             builder.AppendLine("Commands -");
 
