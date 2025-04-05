@@ -127,8 +127,7 @@
         {
             try
             {
-                string username = BotSettings.AdminUser;
-                SocketUser user = Context.Client.GetUser(username);
+                var user = await Context.Client.GetUserAsync(BotSettings.AdminUser);
                 await user.SendMessageAsync(message);
             }
             catch (Exception ex)

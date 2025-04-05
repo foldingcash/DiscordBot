@@ -1,5 +1,6 @@
 ﻿namespace DiscordBot.Console
 {
+    using System;
     using Core;
     using Core.FoldingBot;
     using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +17,13 @@
         {
             return Host.CreateDefaultBuilder(args).UseWindowsService().ConfigureServices((context, services) =>
             {
+                services.AddHttpClient(ClientTypes.FoldingCashApi, (serviceProvider, client) =>
+                {
+                    var settings = serviceProvider.GetRequiredService<FoldingBotSettings>();
+                    var foldingApiUri = new Uri(settings.FoldingApiUri, UriKind.Absolute);
+                    client.BaseAddress = foldingApiUri;
+                });
+
                 services
                     .AddHostedService<Bot>()
                     .AddSingleton<ICommandService, CommandProvider>()

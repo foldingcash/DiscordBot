@@ -142,14 +142,12 @@
 
         private bool IsAdminDirectMessage(SocketCommandContext commandContext)
         {
-            return string.Equals(foldingBotSettings.AdminUser, commandContext.Message.Author.Username,
-                StringComparison.OrdinalIgnoreCase) && commandContext.IsPrivate;
+            return foldingBotSettings.AdminUser == commandContext.Message.Author.Id && commandContext.IsPrivate;
         }
 
         private bool IsAdminRequesting(SocketCommandContext commandContext)
         {
-            return string.Equals(foldingBotSettings.AdminUser, commandContext.Message.Author.Username,
-                StringComparison.OrdinalIgnoreCase);
+            return foldingBotSettings.AdminUser == commandContext.Message.Author.Id;
         }
     }
 }

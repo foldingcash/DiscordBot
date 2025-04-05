@@ -10,8 +10,9 @@
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
+    using Timer = System.Timers.Timer;
 
-    public class Bot : IHostedService
+    public class Bot : IHostedService, IDisposable
     {
         private readonly IBotConfigurationService botConfigurationService;
 
@@ -25,6 +26,8 @@
 
         private DiscordSocketClient client;
 
+        private Timer timer;
+
         public Bot(ICommandService commandService, ILogger<Bot> logger, IHostEnvironment environment,
             IOptionsMonitor<BotSettings> botSettingsMonitor, IBotConfigurationService botConfigurationService)
         {
@@ -35,7 +38,16 @@
             this.botConfigurationService = botConfigurationService;
         }
 
-        private BotSettings botSettings => botSettingsMonitor?.CurrentValue ?? new BotSettings();
+        private BotSettings BotSettings => botSettingsMonitor?.CurrentValue ?? new BotSettings();
+
+        public void Dispose()
+        {
+            timer.Dispose();
+            timer = null;
+
+            client.Dispose();
+            client = null;
+        }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
@@ -44,12 +56,33 @@
                 LogStartup();
                 await botConfigurationService.ReadConfiguration();
                 await commandService.AddModulesAsync();
-                client = new DiscordSocketClient();
-                string token = botSettings.Token;
-                await client.LoginAsync(TokenType.Bot, token);
+                client = new DiscordSocketClient(new DiscordSocketConfig()
+                {
+                    AlwaysDownloadUsers = true
+                });
+                await client.LoginAsync(TokenType.Bot, BotSettings.Token);
                 await client.StartAsync();
 
                 client.MessageReceived += HandleMessageReceived;
+
+                timer = new Timer
+                {
+                    AutoReset = true,
+                    Interval = 10 * 1000
+                };
+                timer.Elapsed += async (sender, args) =>
+                {
+                    if (client.ConnectionState == ConnectionState.Connected)
+                    {
+                        var admin = await client.GetUserAsync(379450659663118336);
+                        if (admin == null)
+                        {
+                            return;
+                        }
+                        await admin.SendMessageAsync("testing elapsed message");
+                    }
+                };
+                timer.Start();
             }
             catch (Exception ex)
             {
@@ -60,12 +93,10 @@
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            if (client != null)
-            {
-                await client.StopAsync();
-                await client.DisposeAsync();
-                client = null;
-            }
+            timer.Stop();
+            timer.Close();
+            await client.LogoutAsync();
+            await client.StopAsync();
         }
 
         private async Task HandleMessageReceived(SocketMessage rawMessage)

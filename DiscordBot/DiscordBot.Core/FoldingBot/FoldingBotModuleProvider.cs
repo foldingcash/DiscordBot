@@ -23,17 +23,21 @@
 
         private readonly IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor;
 
+        private readonly IHttpClientFactory httpFactory;
+
         private readonly ILogger<FoldingBotModuleProvider> logger;
 
         private Func<string, Task> reply = message => Task.CompletedTask;
 
         public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger,
             IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor,
-            IFoldingBotConfigurationService foldingBotConfigurationService)
+            IFoldingBotConfigurationService foldingBotConfigurationService,
+            IHttpClientFactory httpFactory)
         {
             this.logger = logger;
             this.foldingBotSettingsMonitor = foldingBotSettingsMonitor;
             this.foldingBotConfigurationService = foldingBotConfigurationService;
+            this.httpFactory = httpFactory;
         }
 
         private FoldingBotSettings FoldingBotSettings =>
@@ -204,13 +208,11 @@
         {
             try
             {
-                var foldingApiUri = new Uri(FoldingBotSettings.FoldingApiUri, UriKind.Absolute);
-                var getMemberStatsPath = new Uri("health/details", UriKind.Relative);
-                var requestUri = new Uri(foldingApiUri, getMemberStatsPath);
+                var requestUri = new Uri("health/details", UriKind.Relative);
 
                 var serializer = new DataContractJsonSerializer(typeof (HealthResponse));
 
-                using var client = new HttpClient();
+                using HttpClient client = httpFactory.CreateClient(ClientTypes.FoldingCashApi);
 
                 logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
 
@@ -287,13 +289,11 @@
         {
             try
             {
-                var foldingApiUri = new Uri(FoldingBotSettings.FoldingApiUri, UriKind.Absolute);
-                var getMemberStatsPath = new Uri(relativePath, UriKind.Relative);
-                var requestUri = new Uri(foldingApiUri, getMemberStatsPath);
+                var requestUri = new Uri(relativePath, UriKind.Relative);
 
                 var serializer = new DataContractJsonSerializer(typeof (T));
 
-                using var client = new HttpClient();
+                using HttpClient client = httpFactory.CreateClient(ClientTypes.FoldingCashApi);
 
                 logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
 

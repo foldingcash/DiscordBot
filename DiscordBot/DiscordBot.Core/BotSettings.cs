@@ -8,6 +8,6 @@
 
         public string Token { get; set; }
 
-        public string AdminUser { get; set; }
+        public ulong AdminUser { get; set; }
     }
 }
