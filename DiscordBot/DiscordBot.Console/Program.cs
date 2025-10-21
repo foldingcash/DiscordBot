@@ -1,10 +1,12 @@
 ﻿namespace DiscordBot.Console
 {
-    using System;
     using Core;
     using Core.FoldingBot;
+    using Discord.WebSocket;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
+    using Microsoft.Extensions.Options;
+    using System;
 
     public class Program
     {
@@ -19,10 +21,15 @@
             {
                 services.AddHttpClient(ClientTypes.FoldingCashApi, (serviceProvider, client) =>
                 {
-                    var settings = serviceProvider.GetRequiredService<FoldingBotSettings>();
-                    var foldingApiUri = new Uri(settings.FoldingApiUri, UriKind.Absolute);
+                    var settings = serviceProvider.GetRequiredService<IOptions<FoldingBotSettings>>();
+                    var foldingApiUri = new Uri(settings.Value.FoldingApiUri, UriKind.Absolute);
                     client.BaseAddress = foldingApiUri;
                 });
+
+                services.AddSingleton(_ => new DiscordSocketClient(new DiscordSocketConfig()
+                    {
+                        AlwaysDownloadUsers = true
+                    }));
 
                 services
                     .AddHostedService<Bot>()
@@ -34,7 +41,8 @@
                     .Configure<FoldingBotSettings>(context.Configuration.GetSection("AppSettings"))
                     .AddSingleton<IFoldingBotConfigurationService, FoldingBotConfigurationProvider>()
                     .AddSingleton<IBotConfigurationService>(provider =>
-                        provider.GetRequiredService<IFoldingBotConfigurationService>());
+                        provider.GetRequiredService<IFoldingBotConfigurationService>())
+                    .AddSingleton<IBotTimerService, FoldingCashApiTimerProvider>();
             });
         }
     }

@@ -241,7 +241,7 @@
                     return "The bot is Healthy. The API is Unhealthy.";
                 }
 
-                return $"The bot is Healthy. The API is {response.Status}.";
+                return $"The bot is Healthy. The API is {response?.Status ?? ""}.";
             }
             catch (Exception exception)
             {

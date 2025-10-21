@@ -2,15 +2,16 @@
 {
     using System;
     using System.Diagnostics;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Discord;
     using Discord.Commands;
     using Discord.WebSocket;
+    using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
-    using Timer = System.Timers.Timer;
 
     public class Bot : IHostedService, IDisposable
     {
@@ -24,26 +25,35 @@
 
         private readonly ILogger<Bot> logger;
 
+        private readonly IServiceProvider serviceProvider;
+
         private DiscordSocketClient client;
 
-        private Timer timer;
+        private IBotTimerService[] timers;
 
         public Bot(ICommandService commandService, ILogger<Bot> logger, IHostEnvironment environment,
-            IOptionsMonitor<BotSettings> botSettingsMonitor, IBotConfigurationService botConfigurationService)
+            IOptionsMonitor<BotSettings> botSettingsMonitor, IBotConfigurationService botConfigurationService,
+            IServiceProvider serviceProvider, DiscordSocketClient client)
         {
             this.commandService = commandService;
             this.logger = logger;
             this.environment = environment;
             this.botSettingsMonitor = botSettingsMonitor;
             this.botConfigurationService = botConfigurationService;
+            this.serviceProvider = serviceProvider;
+            this.client = client;
         }
 
         private BotSettings BotSettings => botSettingsMonitor?.CurrentValue ?? new BotSettings();
 
         public void Dispose()
         {
-            timer.Dispose();
-            timer = null;
+            foreach (IBotTimerService t in timers)
+            {
+                t.Dispose();
+            }
+
+            timers = null;
 
             client.Dispose();
             client = null;
@@ -56,33 +66,16 @@
                 LogStartup();
                 await botConfigurationService.ReadConfiguration();
                 await commandService.AddModulesAsync();
-                client = new DiscordSocketClient(new DiscordSocketConfig()
-                {
-                    AlwaysDownloadUsers = true
-                });
                 await client.LoginAsync(TokenType.Bot, BotSettings.Token);
                 await client.StartAsync();
 
                 client.MessageReceived += HandleMessageReceived;
 
-                timer = new Timer
+                timers = serviceProvider.GetServices<IBotTimerService>().ToArray();
+                foreach (IBotTimerService t in timers)
                 {
-                    AutoReset = true,
-                    Interval = 10 * 1000
-                };
-                timer.Elapsed += async (sender, args) =>
-                {
-                    if (client.ConnectionState == ConnectionState.Connected)
-                    {
-                        var admin = await client.GetUserAsync(379450659663118336);
-                        if (admin == null)
-                        {
-                            return;
-                        }
-                        await admin.SendMessageAsync("testing elapsed message");
-                    }
-                };
-                timer.Start();
+                    t.Start();
+                }
             }
             catch (Exception ex)
             {
@@ -93,8 +86,12 @@
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            timer.Stop();
-            timer.Close();
+            foreach (IBotTimerService t in timers)
+            {
+                t.Stop();
+                t.Close();
+            }
+
             await client.LogoutAsync();
             await client.StopAsync();
         }
