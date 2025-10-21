@@ -118,6 +118,8 @@
             await ReplyAsyncMode(() => service.LookupUser(searchCriteria));
         }
 
+        [AdminOnly]
+        [Hidden]
         [Command("verify")]
         [Usage("{btc address} {signature} {cash tokens address}")]
         [Summary("Verify yourself using your legacy Bitcoin address")]
