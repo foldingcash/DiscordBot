@@ -1,10 +1,6 @@
 ﻿namespace DiscordBot.Core.FoldingBot
 {
     using System;
-    using System.IO;
-    using System.Net.Http;
-    using System.Text.Json;
-    using System.Threading.Tasks;
     using System.Timers;
     using Discord;
     using Discord.WebSocket;
@@ -18,7 +14,7 @@
 
         private readonly DiscordSocketClient client;
 
-        private readonly IHttpClientFactory httpFactory;
+        private readonly IFoldingApiService foldingApiService;
 
         private readonly ILogger logger;
 
@@ -26,14 +22,15 @@
 
         private Timer timer;
 
-        public FoldingCashApiTimerProvider(ILogger<FoldingCashApiTimerProvider> logger, IHttpClientFactory httpFactory,
+        public FoldingCashApiTimerProvider(ILogger<FoldingCashApiTimerProvider> logger,
             IOptions<BotSettings> botSetttings,
-            DiscordSocketClient client)
+            DiscordSocketClient client,
+            IFoldingApiService foldingApiService)
         {
             this.logger = logger;
-            this.httpFactory = httpFactory;
             this.botSetttings = botSetttings;
             this.client = client;
+            this.foldingApiService = foldingApiService;
 
             timer = new Timer
             {
@@ -95,7 +92,7 @@
                     return;
                 }
 
-                HealthResponse response = await HealthCheck();
+                HealthResponse response = await foldingApiService.HealthCheck();
 
                 if (response == null ||
                     !string.Equals(response.Status, "Healthy", StringComparison.CurrentCultureIgnoreCase))
@@ -104,50 +101,6 @@
                     timer.Stop();
                     cooldown.Start();
                 }
-            }
-        }
-
-        private async Task<HealthResponse> HealthCheck()
-        {
-            try
-            {
-                var requestUri = new Uri("health/details", UriKind.Relative);
-
-                using HttpClient client = httpFactory.CreateClient(ClientTypes.FoldingCashApi);
-
-                logger.LogDebug("Starting GET from URI: {URI}", requestUri.ToString());
-
-                HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
-
-                logger.LogDebug("Finished GET from URI");
-
-                if (!httpResponse.IsSuccessStatusCode)
-                {
-                    Stream responseContent = await httpResponse.Content.ReadAsStreamAsync();
-                    logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
-                        httpResponse.StatusCode, responseContent);
-
-                    return null;
-                }
-
-                if (logger.IsEnabled(LogLevel.Trace))
-                {
-                    string responseContent = await httpResponse.Content.ReadAsStringAsync();
-                    logger.LogTrace("responseContent: {responseContent}", responseContent);
-                }
-
-                Stream contentStream = await httpResponse.Content.ReadAsStreamAsync();
-                var healthResponse = await JsonSerializer.DeserializeAsync<HealthResponse>(contentStream,
-                    new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                    });
-                return healthResponse;
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(exception, "There was an exception while attempting to get the API's health");
-                return null;
             }
         }
     }

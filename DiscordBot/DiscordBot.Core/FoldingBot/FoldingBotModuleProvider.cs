@@ -19,6 +19,8 @@
 
         private const string DisplayDateFormat = "MM/dd/yyyy";
 
+        private readonly IFoldingApiService foldingApiService;
+
         private readonly IFoldingBotConfigurationService foldingBotConfigurationService;
 
         private readonly IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor;
@@ -32,12 +34,14 @@
         public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger,
             IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor,
             IFoldingBotConfigurationService foldingBotConfigurationService,
-            IHttpClientFactory httpFactory)
+            IHttpClientFactory httpFactory,
+            IFoldingApiService foldingApiService)
         {
             this.logger = logger;
             this.foldingBotSettingsMonitor = foldingBotSettingsMonitor;
             this.foldingBotConfigurationService = foldingBotConfigurationService;
             this.httpFactory = httpFactory;
+            this.foldingApiService = foldingApiService;
         }
 
         private FoldingBotSettings FoldingBotSettings =>
@@ -206,48 +210,14 @@
 
         public async Task<string> HealthCheck()
         {
-            try
+            HealthResponse healthResponse = await foldingApiService.HealthCheck();
+
+            if (healthResponse == default)
             {
-                var requestUri = new Uri("health/details", UriKind.Relative);
-
-                var serializer = new DataContractJsonSerializer(typeof (HealthResponse));
-
-                using HttpClient client = httpFactory.CreateClient(ClientTypes.FoldingCashApi);
-
-                logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
-
-                HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
-
-                logger.LogInformation("Finished GET from URI");
-
-                string responseContent = await httpResponse.Content.ReadAsStringAsync();
-
-                if (!httpResponse.IsSuccessStatusCode)
-                {
-                    logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
-                        httpResponse.StatusCode, responseContent);
-
-                    return "The bot is Healthy. The API is Unhealthy.";
-                }
-
-                logger.LogTrace("responseContent: {responseContent}", responseContent);
-
-                await using var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent));
-
-                var response = serializer.ReadObject(streamReader) as HealthResponse;
-
-                if (response is null)
-                {
-                    return "The bot is Healthy. The API is Unhealthy.";
-                }
-
-                return $"The bot is Healthy. The API is {response?.Status ?? ""}.";
+                return "The bot is Health. The API is Unhealthy.";
             }
-            catch (Exception exception)
-            {
-                logger.LogError(exception, "There was an exception");
-                return "The bot is Healthy. The API is Unhealthy.";
-            }
+
+            return $"The bot is Healthy. The API is {healthResponse.Status}.";
         }
 
         public async Task<string> LookupUser(string searchCriteria)
