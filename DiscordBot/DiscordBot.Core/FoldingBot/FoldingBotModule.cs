@@ -15,10 +15,13 @@
 
         private readonly IFoldingBotModuleService service;
 
-        public FoldingBotModule(IFoldingBotModuleService service, ILogger<FoldingBotModule> logger,
+        public FoldingBotModule(ILogger<FoldingBotModule> logger,
             IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor,
-            IFoldingBotConfigurationService foldingBotConfigurationService)
-            : base(logger, foldingBotConfigurationService)
+            IOptionsMonitor<BotSettings> botSettingsMonitor,
+            IFoldingBotConfigurationService foldingBotConfigurationService,
+            IFoldingBotModuleService service
+        )
+            : base(logger, botSettingsMonitor, foldingBotConfigurationService)
         {
             this.service = service;
             this.logger = logger;
@@ -99,12 +102,30 @@
             await ReplyAsyncMode(() => service.GetUserStats(cashTokensAddress));
         }
 
+        [AdminOnly]
+        [Command("health")]
+        [Summary("Check if FoldingCash services are alive")]
+        public async Task HealthCheck()
+        {
+            await ReplyAsyncMode(() => service.HealthCheck());
+        }
+
         [Command("lookup", RunMode = RunMode.Async)]
         [Usage("{search criteria}")]
         [Summary("Helps to find yourself, not case sensitive and searches the start and end of usernames for a match")]
         public async Task LookupUser([Remainder] string searchCriteria)
         {
             await ReplyAsyncMode(() => service.LookupUser(searchCriteria));
+        }
+
+        [AdminOnly]
+        [Hidden]
+        [Command("verify")]
+        [Usage("{btc address} {signature} {cash tokens address}")]
+        [Summary("Verify yourself using your legacy Bitcoin address")]
+        public async Task VerifyUser(string bitcoinAddress, string signature, string cashTokensAddress)
+        {
+            await Task.Delay(0);
         }
     }
 }

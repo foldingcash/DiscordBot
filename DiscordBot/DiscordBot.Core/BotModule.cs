@@ -9,24 +9,31 @@
     using Discord.Commands;
     using Discord.WebSocket;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
 
     internal class BotModule : ModuleBase<SocketCommandContext>
     {
-        private static readonly object asyncLock = new object();
+        private static readonly object AsyncLock = new object();
 
         private static bool isRunningAsyncMethod;
 
         private readonly IBotConfigurationService botConfigurationService;
 
+        private readonly IOptionsMonitor<BotSettings> botSettingsMonitor;
+
         private readonly Emoji hourglass = new Emoji("\u23F3");
 
         private readonly ILogger logger;
 
-        public BotModule(ILogger logger, IBotConfigurationService botConfigurationService)
+        public BotModule(ILogger logger,
+            IOptionsMonitor<BotSettings> botSettingsMonitor, IBotConfigurationService botConfigurationService)
         {
             this.logger = logger;
             this.botConfigurationService = botConfigurationService;
+            this.botSettingsMonitor = botSettingsMonitor;
         }
+
+        private BotSettings BotSettings => botSettingsMonitor.CurrentValue;
 
         protected async Task Announce(string message, string announceGuild, string announceChannel)
         {
@@ -53,7 +60,7 @@
         {
             CommandAttribute commandAttribute = GetCommandAttribute(methodName);
 
-            if (botConfigurationService.DisabledCommandsContains(commandAttribute.Text))
+            if (botConfigurationService.DisabledCommandsContains(commandAttribute?.Text))
             {
                 return;
             }
@@ -70,6 +77,8 @@
             }
             catch (Exception ex)
             {
+                await SendAdminMessage(
+                    $"There was an exception while replying to '{methodName}'.{Environment.NewLine}{Environment.NewLine}{ex}");
                 logger.LogError(ex, "There was an unhandled exception while replying");
             }
             finally
@@ -90,7 +99,7 @@
         {
             var runAsync = true;
 
-            lock (asyncLock)
+            lock (AsyncLock)
             {
                 if (isRunningAsyncMethod)
                 {
@@ -111,6 +120,19 @@
             else
             {
                 await Reply("Wait until the bot has finished responding to another user's long running request.");
+            }
+        }
+
+        private async Task SendAdminMessage(string message)
+        {
+            try
+            {
+                var user = await Context.Client.GetUserAsync(BotSettings.AdminUser);
+                await user.SendMessageAsync(message);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to send admin message");
             }
         }
     }

@@ -23,17 +23,21 @@
 
         private readonly IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor;
 
+        private readonly IHttpClientFactory httpFactory;
+
         private readonly ILogger<FoldingBotModuleProvider> logger;
 
         private Func<string, Task> reply = message => Task.CompletedTask;
 
         public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger,
             IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor,
-            IFoldingBotConfigurationService foldingBotConfigurationService)
+            IFoldingBotConfigurationService foldingBotConfigurationService,
+            IHttpClientFactory httpFactory)
         {
             this.logger = logger;
             this.foldingBotSettingsMonitor = foldingBotSettingsMonitor;
             this.foldingBotConfigurationService = foldingBotConfigurationService;
+            this.httpFactory = httpFactory;
         }
 
         private FoldingBotSettings FoldingBotSettings =>
@@ -200,6 +204,52 @@
             return builder.ToString();
         }
 
+        public async Task<string> HealthCheck()
+        {
+            try
+            {
+                var requestUri = new Uri("health/details", UriKind.Relative);
+
+                var serializer = new DataContractJsonSerializer(typeof (HealthResponse));
+
+                using HttpClient client = httpFactory.CreateClient(ClientTypes.FoldingCashApi);
+
+                logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
+
+                HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
+
+                logger.LogInformation("Finished GET from URI");
+
+                string responseContent = await httpResponse.Content.ReadAsStringAsync();
+
+                if (!httpResponse.IsSuccessStatusCode)
+                {
+                    logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
+                        httpResponse.StatusCode, responseContent);
+
+                    return "The bot is Healthy. The API is Unhealthy.";
+                }
+
+                logger.LogTrace("responseContent: {responseContent}", responseContent);
+
+                await using var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent));
+
+                var response = serializer.ReadObject(streamReader) as HealthResponse;
+
+                if (response is null)
+                {
+                    return "The bot is Healthy. The API is Unhealthy.";
+                }
+
+                return $"The bot is Healthy. The API is {response?.Status ?? ""}.";
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, "There was an exception");
+                return "The bot is Healthy. The API is Unhealthy.";
+            }
+        }
+
         public async Task<string> LookupUser(string searchCriteria)
         {
             var membersResponse = await CallApi<MembersResponse>("v1/GetMembers/All");
@@ -239,13 +289,11 @@
         {
             try
             {
-                var foldingApiUri = new Uri(FoldingBotSettings.FoldingApiUri, UriKind.Absolute);
-                var getMemberStatsPath = new Uri(relativePath, UriKind.Relative);
-                var requestUri = new Uri(foldingApiUri, getMemberStatsPath);
+                var requestUri = new Uri(relativePath, UriKind.Relative);
 
                 var serializer = new DataContractJsonSerializer(typeof (T));
 
-                using var client = new HttpClient();
+                using HttpClient client = httpFactory.CreateClient(ClientTypes.FoldingCashApi);
 
                 logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
 

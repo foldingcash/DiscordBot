@@ -7,5 +7,7 @@
         public string ConfigurationPath { get; set; }
 
         public string Token { get; set; }
+
+        public ulong AdminUser { get; set; }
     }
 }

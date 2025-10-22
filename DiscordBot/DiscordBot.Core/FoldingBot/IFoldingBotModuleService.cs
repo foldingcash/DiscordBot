@@ -25,6 +25,8 @@
 
         Task<string> GetUserStats(string bitcoinAddress);
 
+        Task<string> HealthCheck();
+
         Task<string> LookupUser(string searchCriteria);
     }
 }

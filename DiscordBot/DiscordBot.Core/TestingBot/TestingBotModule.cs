@@ -4,13 +4,15 @@
     using Attributes;
     using Discord.Commands;
     using Microsoft.Extensions.Logging;
+    using Microsoft.Extensions.Options;
 
     internal class TestingBotModule : BotModule
     {
         private readonly ILogger logger;
 
-        public TestingBotModule(ILogger<TestingBotModule> logger, IBotConfigurationService botConfigurationService)
-            : base(logger, botConfigurationService)
+        public TestingBotModule(ILogger<TestingBotModule> logger, IOptionsMonitor<BotSettings> botSettingsMonitor,
+            IBotConfigurationService botConfigurationService)
+            : base(logger, botSettingsMonitor, botConfigurationService)
         {
             this.logger = logger;
         }

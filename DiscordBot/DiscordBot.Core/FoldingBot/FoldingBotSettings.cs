@@ -2,7 +2,7 @@
 {
     public class FoldingBotSettings
     {
-        public string AdminUser { get; set; }
+        public ulong AdminUser { get; set; }
 
         public string AnnounceChannel { get; set; }
 

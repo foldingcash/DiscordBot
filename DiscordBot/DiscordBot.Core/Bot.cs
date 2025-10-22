@@ -2,20 +2,24 @@
 {
     using System;
     using System.Diagnostics;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Discord;
     using Discord.Commands;
     using Discord.WebSocket;
+    using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
 
-    public class Bot : IHostedService
+    public class Bot : IHostedService, IDisposable
     {
         private readonly IBotConfigurationService botConfigurationService;
 
         private readonly IOptionsMonitor<BotSettings> botSettingsMonitor;
+
+        private readonly DiscordSocketClient client;
 
         private readonly ICommandService commandService;
 
@@ -23,33 +27,65 @@
 
         private readonly ILogger<Bot> logger;
 
-        private DiscordSocketClient client;
+        private bool disposed;
+
+        private IBotTimerService[] timers;
 
         public Bot(ICommandService commandService, ILogger<Bot> logger, IHostEnvironment environment,
-            IOptionsMonitor<BotSettings> botSettingsMonitor, IBotConfigurationService botConfigurationService)
+            IOptionsMonitor<BotSettings> botSettingsMonitor, IBotConfigurationService botConfigurationService,
+            IServiceProvider serviceProvider, DiscordSocketClient client)
         {
             this.commandService = commandService;
             this.logger = logger;
             this.environment = environment;
             this.botSettingsMonitor = botSettingsMonitor;
             this.botConfigurationService = botConfigurationService;
+            this.client = client;
+
+            timers = serviceProvider.GetServices<IBotTimerService>().ToArray();
+            disposed = false;
         }
 
-        private BotSettings botSettings => botSettingsMonitor?.CurrentValue ?? new BotSettings();
+        private BotSettings BotSettings => botSettingsMonitor?.CurrentValue ?? new BotSettings();
+
+        public void Dispose()
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            for (var i = 0; i < timers.Length; i++)
+            {
+                timers[i]?.Dispose();
+                timers[i] = null;
+            }
+
+            timers = null;
+            disposed = true;
+        }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
+            if (disposed)
+            {
+                throw new ObjectDisposedException(nameof(Bot), "Start performed after disposing");
+            }
+
             try
             {
                 LogStartup();
                 await botConfigurationService.ReadConfiguration();
                 await commandService.AddModulesAsync();
-                client = new DiscordSocketClient();
-                string token = botSettings.Token;
-                await client.LoginAsync(TokenType.Bot, token);
+                await client.LoginAsync(TokenType.Bot, BotSettings.Token);
                 await client.StartAsync();
 
                 client.MessageReceived += HandleMessageReceived;
+
+                foreach (IBotTimerService t in timers)
+                {
+                    t.Start();
+                }
             }
             catch (Exception ex)
             {
@@ -60,12 +96,19 @@
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            if (client != null)
+            if (disposed)
             {
-                await client.StopAsync();
-                await client.DisposeAsync();
-                client = null;
+                throw new ObjectDisposedException(nameof(Bot), "Stopped performed after disposing");
             }
+
+            foreach (IBotTimerService t in timers)
+            {
+                t.Stop();
+                t.Close();
+            }
+
+            await client.LogoutAsync();
+            await client.StopAsync();
         }
 
         private async Task HandleMessageReceived(SocketMessage rawMessage)
