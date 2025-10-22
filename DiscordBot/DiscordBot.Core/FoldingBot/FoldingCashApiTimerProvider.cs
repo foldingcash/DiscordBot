@@ -3,8 +3,7 @@
     using System;
     using System.IO;
     using System.Net.Http;
-    using System.Runtime.Serialization.Json;
-    using System.Text;
+    using System.Text.Json;
     using System.Threading.Tasks;
     using System.Timers;
     using Discord;
@@ -114,8 +113,6 @@
             {
                 var requestUri = new Uri("health/details", UriKind.Relative);
 
-                var serializer = new DataContractJsonSerializer(typeof (HealthResponse));
-
                 using HttpClient client = httpFactory.CreateClient(ClientTypes.FoldingCashApi);
 
                 logger.LogDebug("Starting GET from URI: {URI}", requestUri.ToString());
@@ -124,23 +121,28 @@
 
                 logger.LogDebug("Finished GET from URI");
 
-                string responseContent = await httpResponse.Content.ReadAsStringAsync();
-
                 if (!httpResponse.IsSuccessStatusCode)
                 {
+                    Stream responseContent = await httpResponse.Content.ReadAsStreamAsync();
                     logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
                         httpResponse.StatusCode, responseContent);
 
                     return null;
                 }
 
-                logger.LogTrace("responseContent: {responseContent}", responseContent);
+                if (logger.IsEnabled(LogLevel.Trace))
+                {
+                    string responseContent = await httpResponse.Content.ReadAsStringAsync();
+                    logger.LogTrace("responseContent: {responseContent}", responseContent);
+                }
 
-                await using var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent));
-
-                var response = serializer.ReadObject(streamReader) as HealthResponse;
-
-                return response;
+                Stream contentStream = await httpResponse.Content.ReadAsStreamAsync();
+                var healthResponse = await JsonSerializer.DeserializeAsync<HealthResponse>(contentStream,
+                    new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                    });
+                return healthResponse;
             }
             catch (Exception exception)
             {
