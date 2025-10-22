@@ -49,7 +49,6 @@
                 Enabled = false,
                 Interval = 3600000 // 1 hour
             };
-            cooldown.Interval = 1000;
             cooldown.Elapsed += Cooldown;
         }
 
