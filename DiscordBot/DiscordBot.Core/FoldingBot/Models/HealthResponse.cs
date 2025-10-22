@@ -2,7 +2,7 @@
 {
     using System.Collections.Generic;
 
-    internal class HealthResponse
+    public class HealthResponse
     {
         public Dictionary<string, HealthEntry> Entries { get; set; }
 
@@ -11,7 +11,7 @@
         public string TotalDuration { get; set; }
     }
 
-    internal class HealthEntry
+    public class HealthEntry
     {
         public Dictionary<string, string> Data { get; set; }
 
