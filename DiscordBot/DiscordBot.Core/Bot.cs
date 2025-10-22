@@ -19,15 +19,15 @@
 
         private readonly IOptionsMonitor<BotSettings> botSettingsMonitor;
 
+        private readonly DiscordSocketClient client;
+
         private readonly ICommandService commandService;
 
         private readonly IHostEnvironment environment;
 
         private readonly ILogger<Bot> logger;
 
-        private readonly IServiceProvider serviceProvider;
-
-        private DiscordSocketClient client;
+        private bool disposed;
 
         private IBotTimerService[] timers;
 
@@ -40,27 +40,38 @@
             this.environment = environment;
             this.botSettingsMonitor = botSettingsMonitor;
             this.botConfigurationService = botConfigurationService;
-            this.serviceProvider = serviceProvider;
             this.client = client;
+
+            timers = serviceProvider.GetServices<IBotTimerService>().ToArray();
+            disposed = false;
         }
 
         private BotSettings BotSettings => botSettingsMonitor?.CurrentValue ?? new BotSettings();
 
         public void Dispose()
         {
-            foreach (IBotTimerService t in timers)
+            if (disposed)
             {
-                t.Dispose();
+                return;
+            }
+
+            for (var i = 0; i < timers.Length; i++)
+            {
+                timers[i]?.Dispose();
+                timers[i] = null;
             }
 
             timers = null;
-
-            client.Dispose();
-            client = null;
+            disposed = true;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
+            if (disposed)
+            {
+                throw new ObjectDisposedException(nameof(Bot), "Start performed after disposing");
+            }
+
             try
             {
                 LogStartup();
@@ -71,7 +82,6 @@
 
                 client.MessageReceived += HandleMessageReceived;
 
-                timers = serviceProvider.GetServices<IBotTimerService>().ToArray();
                 foreach (IBotTimerService t in timers)
                 {
                     t.Start();
@@ -86,6 +96,11 @@
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
+            if (disposed)
+            {
+                throw new ObjectDisposedException(nameof(Bot), "Stopped performed after disposing");
+            }
+
             foreach (IBotTimerService t in timers)
             {
                 t.Stop();
