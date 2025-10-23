@@ -104,7 +104,6 @@
             foreach (IBotTimerService t in timers)
             {
                 t.Stop();
-                t.Close();
             }
 
             await client.LogoutAsync();

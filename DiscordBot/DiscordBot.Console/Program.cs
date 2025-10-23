@@ -38,6 +38,7 @@
 
                 services
                     .Configure<FoldingBotSettings>(context.Configuration.GetSection("AppSettings"))
+                    .Configure<FoldingCashApiTimerSettings>(context.Configuration.GetSection(nameof(FoldingCashApiTimerSettings)))
                     .AddSingleton<IFoldingBotConfigurationService, FoldingBotConfigurationProvider>()
                     .AddSingleton<IBotConfigurationService>(provider =>
                         provider.GetRequiredService<IFoldingBotConfigurationService>())

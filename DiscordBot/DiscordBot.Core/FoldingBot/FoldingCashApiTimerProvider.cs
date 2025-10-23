@@ -24,6 +24,7 @@
 
         public FoldingCashApiTimerProvider(ILogger<FoldingCashApiTimerProvider> logger,
             IOptions<BotSettings> botSetttings,
+            IOptions<FoldingCashApiTimerSettings> timerSettings,
             DiscordSocketClient client,
             IFoldingApiService foldingApiService)
         {
@@ -35,7 +36,8 @@
             timer = new Timer
             {
                 AutoReset = true,
-                Interval = 10000, // 10 seconds
+                Enabled = false,
+                Interval = timerSettings.Value.Interval
             };
             timer.Elapsed += Elapsed;
 
@@ -43,22 +45,17 @@
             {
                 AutoReset = false,
                 Enabled = false,
-                Interval = 3600000 // 1 hour
+                Interval = timerSettings.Value.CooldownInterval
             };
             cooldown.Elapsed += Cooldown;
         }
 
-        public void Close()
-        {
-            timer.Close();
-        }
-
         public void Dispose()
         {
-            timer.Dispose();
+            timer?.Dispose();
             timer = null;
 
-            cooldown.Dispose();
+            cooldown?.Dispose();
             cooldown = null;
         }
 
