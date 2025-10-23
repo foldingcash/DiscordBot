@@ -1,11 +1,13 @@
 ﻿namespace DiscordBot.Core.FoldingBot
 {
     using System;
+    using System.Collections.Specialized;
     using System.IO;
     using System.Net;
     using System.Net.Http;
     using System.Text.Json;
     using System.Threading.Tasks;
+    using System.Web;
     using Microsoft.Extensions.Logging;
     using Models;
 
@@ -33,11 +35,15 @@
         public async Task<DistroResponse>
             GetDistro(DateTime startDate, DateTime endDate, int amount)
         {
-
-            // 8 is a magic number for bitcoin cash users
+            const int cashTokenUsers = 8;
+            NameValueCollection query = HttpUtility.ParseQueryString(string.Empty);
+            query.Add("startDate", startDate.ToString(ApiDateFormat));
+            query.Add("endDate", endDate.ToString(ApiDateFormat));
+            query.Add("amount", amount.ToString());
+            query.Add("includeFoldingUserTypes", cashTokenUsers.ToString());
             var endpoint =
                 new Uri(
-                    $"v1/GetDistro?startDate={startDate.ToString(ApiDateFormat)}&endDate={endDate.ToString(ApiDateFormat)}&amount=100&includeFoldingUserTypes=8",
+                    $"v1/GetDistro?{query}",
                     UriKind.Relative);
 
             var response = await CallApi<DistroResponse>(endpoint, 3);
