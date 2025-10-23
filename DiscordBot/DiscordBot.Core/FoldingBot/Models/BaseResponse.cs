@@ -3,7 +3,7 @@
     using System.Runtime.Serialization;
 
     [DataContract]
-    internal class BaseResponse
+    public class BaseResponse
     {
         [DataMember(Name = "success")]
         public bool Success { get; set; }

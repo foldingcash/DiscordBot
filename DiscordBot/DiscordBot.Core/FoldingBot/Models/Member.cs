@@ -3,7 +3,7 @@
     using System.Runtime.Serialization;
 
     [DataContract]
-    internal class Member
+    public class Member
     {
         [DataMember(Name = "bitcoinAddress")]
         public string BitcoinAddress { get; set; }
