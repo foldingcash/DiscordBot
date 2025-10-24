@@ -65,18 +65,9 @@
 
                 logger.LogDebug("Starting GET from URI: {URI}", endpoint.ToString());
 
-                HttpResponseMessage httpResponse = await client.GetAsync(endpoint);
+                using HttpResponseMessage httpResponse = await client.GetAsync(endpoint);
 
                 logger.LogDebug("Finished GET from URI");
-
-                if (!httpResponse.IsSuccessStatusCode)
-                {
-                    Stream responseContent = await httpResponse.Content.ReadAsStreamAsync();
-                    logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
-                        httpResponse.StatusCode, responseContent);
-
-                    return default;
-                }
 
                 if (!httpResponse.IsSuccessStatusCode)
                 {
@@ -100,7 +91,7 @@
                     logger.LogTrace("responseContent: {responseContent}", responseContent);
                 }
 
-                Stream contentStream = await httpResponse.Content.ReadAsStreamAsync();
+                await using Stream contentStream = await httpResponse.Content.ReadAsStreamAsync();
                 var response = await JsonSerializer.DeserializeAsync<T>(contentStream,
                     new JsonSerializerOptions
                     {
