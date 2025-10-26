@@ -5,7 +5,7 @@
     using System.Runtime.Serialization;
 
     [DataContract]
-    internal class DistroResponse : BaseResponse
+    public class DistroResponse : BaseResponse
     {
         [DataMember(Name = "distro")]
         public IList<DistroUser> Distro { get; set; }

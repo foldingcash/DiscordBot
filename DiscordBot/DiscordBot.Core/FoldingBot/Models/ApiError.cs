@@ -3,7 +3,7 @@
     using System.Runtime.Serialization;
 
     [DataContract]
-    internal class ApiError
+    public class ApiError
     {
         [DataMember(Name = "errorCode")]
         public string ErrorCode { get; set; }

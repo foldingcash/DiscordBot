@@ -1,12 +1,12 @@
 ﻿namespace DiscordBot.Console
 {
+    using System;
     using Core;
     using Core.FoldingBot;
     using Discord.WebSocket;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Options;
-    using System;
 
     public class Program
     {
@@ -26,10 +26,10 @@
                     client.BaseAddress = foldingApiUri;
                 });
 
-                services.AddSingleton(_ => new DiscordSocketClient(new DiscordSocketConfig()
-                    {
-                        AlwaysDownloadUsers = true
-                    }));
+                services.AddSingleton(_ => new DiscordSocketClient(new DiscordSocketConfig
+                {
+                    AlwaysDownloadUsers = true
+                }));
 
                 services
                     .AddHostedService<Bot>()
@@ -37,12 +37,14 @@
                     .Configure<BotSettings>(context.Configuration.GetSection("AppSettings"));
 
                 services
-                    .AddSingleton<IFoldingBotModuleService, FoldingBotModuleProvider>()
                     .Configure<FoldingBotSettings>(context.Configuration.GetSection("AppSettings"))
+                    .Configure<FoldingCashApiTimerSettings>(context.Configuration.GetSection(nameof(FoldingCashApiTimerSettings)))
                     .AddSingleton<IFoldingBotConfigurationService, FoldingBotConfigurationProvider>()
                     .AddSingleton<IBotConfigurationService>(provider =>
                         provider.GetRequiredService<IFoldingBotConfigurationService>())
-                    .AddSingleton<IBotTimerService, FoldingCashApiTimerProvider>();
+                    .AddSingleton<IFoldingApiService, FoldingApiProvider>()
+                    .AddSingleton<IBotTimerService, FoldingCashApiTimerProvider>()
+                    .AddSingleton<IFoldingBotModuleService, FoldingBotModuleProvider>();
             });
         }
     }

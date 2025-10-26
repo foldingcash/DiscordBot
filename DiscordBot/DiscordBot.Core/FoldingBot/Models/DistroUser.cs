@@ -3,7 +3,7 @@
     using System.Runtime.Serialization;
 
     [DataContract]
-    internal class DistroUser
+    public class DistroUser
     {
         [DataMember(Name = "amount")]
         public decimal Amount { get; set; }

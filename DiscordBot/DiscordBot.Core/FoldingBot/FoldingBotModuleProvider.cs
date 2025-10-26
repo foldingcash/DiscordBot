@@ -2,11 +2,8 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq;
-    using System.Net;
     using System.Net.Http;
-    using System.Runtime.Serialization.Json;
     using System.Text;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
@@ -15,9 +12,9 @@
 
     public class FoldingBotModuleProvider : IFoldingBotModuleService
     {
-        private const string ApiDateFormat = "MM/dd/yyyy";
-
         private const string DisplayDateFormat = "MM/dd/yyyy";
+
+        private readonly IFoldingApiService foldingApiService;
 
         private readonly IFoldingBotConfigurationService foldingBotConfigurationService;
 
@@ -32,12 +29,14 @@
         public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger,
             IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor,
             IFoldingBotConfigurationService foldingBotConfigurationService,
-            IHttpClientFactory httpFactory)
+            IHttpClientFactory httpFactory,
+            IFoldingApiService foldingApiService)
         {
             this.logger = logger;
             this.foldingBotSettingsMonitor = foldingBotSettingsMonitor;
             this.foldingBotConfigurationService = foldingBotConfigurationService;
             this.httpFactory = httpFactory;
+            this.foldingApiService = foldingApiService;
         }
 
         private FoldingBotSettings FoldingBotSettings =>
@@ -206,53 +205,19 @@
 
         public async Task<string> HealthCheck()
         {
-            try
+            HealthResponse healthResponse = await foldingApiService.HealthCheck();
+
+            if (healthResponse == default)
             {
-                var requestUri = new Uri("health/details", UriKind.Relative);
-
-                var serializer = new DataContractJsonSerializer(typeof (HealthResponse));
-
-                using HttpClient client = httpFactory.CreateClient(ClientTypes.FoldingCashApi);
-
-                logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
-
-                HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
-
-                logger.LogInformation("Finished GET from URI");
-
-                string responseContent = await httpResponse.Content.ReadAsStringAsync();
-
-                if (!httpResponse.IsSuccessStatusCode)
-                {
-                    logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
-                        httpResponse.StatusCode, responseContent);
-
-                    return "The bot is Healthy. The API is Unhealthy.";
-                }
-
-                logger.LogTrace("responseContent: {responseContent}", responseContent);
-
-                await using var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent));
-
-                var response = serializer.ReadObject(streamReader) as HealthResponse;
-
-                if (response is null)
-                {
-                    return "The bot is Healthy. The API is Unhealthy.";
-                }
-
-                return $"The bot is Healthy. The API is {response?.Status ?? ""}.";
+                return "The bot is Health. The API is Unhealthy.";
             }
-            catch (Exception exception)
-            {
-                logger.LogError(exception, "There was an exception");
-                return "The bot is Healthy. The API is Unhealthy.";
-            }
+
+            return $"The bot is Healthy. The API is {healthResponse.Status}.";
         }
 
         public async Task<string> LookupUser(string searchCriteria)
         {
-            var membersResponse = await CallApi<MembersResponse>("v1/GetMembers/All");
+            MembersResponse membersResponse = await foldingApiService.GetAllMembers();
 
             if (membersResponse == default)
             {
@@ -284,70 +249,6 @@
                 $"Start: {distroResponse.Start.ToString(DisplayDateFormat)} End: {distroResponse.End.ToString(DisplayDateFormat)}");
         }
 
-        private async Task<T> CallApi<T>(string relativePath, int retryAttempts = 3, int sleepInSeconds = 300)
-            where T : BaseResponse
-        {
-            try
-            {
-                var requestUri = new Uri(relativePath, UriKind.Relative);
-
-                var serializer = new DataContractJsonSerializer(typeof (T));
-
-                using HttpClient client = httpFactory.CreateClient(ClientTypes.FoldingCashApi);
-
-                logger.LogInformation("Starting GET from URI: {URI}", requestUri.ToString());
-
-                HttpResponseMessage httpResponse = await client.GetAsync(requestUri);
-
-                logger.LogInformation("Finished GET from URI");
-
-                string responseContent = await httpResponse.Content.ReadAsStringAsync();
-
-                if (!httpResponse.IsSuccessStatusCode)
-                {
-                    logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
-                        httpResponse.StatusCode, responseContent);
-
-                    if (IsTimeout(httpResponse.StatusCode) && retryAttempts > 0)
-                    {
-                        await reply("The hamsters are slow today...please give us more time");
-                        logger.LogDebug("Going to attempt to download again after sleeping");
-                        await Task.Delay(sleepInSeconds * 1000);
-                        return await CallApi<T>(relativePath, --retryAttempts);
-                    }
-
-                    return default;
-                }
-
-                logger.LogTrace("responseContent: {responseContent}", responseContent);
-
-                await using var streamReader = new MemoryStream(Encoding.UTF8.GetBytes(responseContent));
-
-                var response = serializer.ReadObject(streamReader) as T;
-
-                if (response is null || !response.Success)
-                {
-                    return default;
-                }
-
-                return response;
-            }
-            catch (TaskCanceledException exception)
-            {
-                if (retryAttempts > 0)
-                {
-                    await reply("The hamsters are slow today...please give us more time");
-                    logger.LogDebug(exception, "Going to attempt to download again after sleeping");
-                    await Task.Delay(sleepInSeconds * 1000);
-                    return await CallApi<T>(relativePath, --retryAttempts);
-                }
-
-                await reply("The api is down :( try again later");
-                logger.LogError(exception, "There was an unhandled exception");
-                throw;
-            }
-        }
-
         private async Task<DistroResponse>
             GetCurrentDistro()
         {
@@ -363,10 +264,8 @@
                     DateTime.DaysInMonth(startDate.Year, startDate.Month));
             }
 
-            // 8 is a magic number for bitcoin cash users
-            var distroResponse = await CallApi<DistroResponse>(
-                $"v1/GetDistro?startDate={startDate.ToString(ApiDateFormat)}&endDate={endDate.ToString(ApiDateFormat)}&amount=100&includeFoldingUserTypes=8");
-            return distroResponse;
+            DistroResponse response = await foldingApiService.GetDistro(startDate, endDate, 100);
+            return response;
         }
 
         private DateTime GetDistributionDate()
@@ -400,12 +299,6 @@
             }
 
             return distributionDate;
-        }
-
-        private bool IsTimeout(HttpStatusCode statusCode)
-        {
-            return statusCode == HttpStatusCode.BadGateway || statusCode == HttpStatusCode.GatewayTimeout
-                                                           || statusCode == HttpStatusCode.RequestTimeout;
         }
     }
 }
