@@ -3,6 +3,7 @@
     using System;
     using Core;
     using Core.FoldingBot;
+    using Discord;
     using Discord.WebSocket;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
@@ -28,9 +29,14 @@
                 client.BaseAddress = new Uri(settings.Value.FoldingApiUri, UriKind.Absolute);
             });
 
+            // MessageContent is a privileged intent, it must also be enabled in the Discord Developer Portal.
+            // It is needed to read "!" prefixed commands in guild channels; mentions and DMs work without it.
             services.AddSingleton(_ => new DiscordSocketClient(new DiscordSocketConfig
             {
-                AlwaysDownloadUsers = true
+                GatewayIntents = GatewayIntents.Guilds
+                                 | GatewayIntents.GuildMessages
+                                 | GatewayIntents.DirectMessages
+                                 | GatewayIntents.MessageContent
             }));
 
             services
