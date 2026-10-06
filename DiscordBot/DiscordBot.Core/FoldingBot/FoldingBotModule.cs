@@ -18,16 +18,12 @@
         public FoldingBotModule(ILogger<FoldingBotModule> logger,
             IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor,
             IOptionsMonitor<BotSettings> botSettingsMonitor,
-            IFoldingBotConfigurationService foldingBotConfigurationService,
-            IFoldingBotModuleService service
-        )
-            : base(logger, botSettingsMonitor, foldingBotConfigurationService)
+            IFoldingBotModuleService service)
+            : base(logger, botSettingsMonitor)
         {
             this.service = service;
             this.logger = logger;
             this.foldingBotSettingsMonitor = foldingBotSettingsMonitor;
-
-            service.Reply = message => Reply(message, nameof(IFoldingBotModuleService));
         }
 
         private FoldingBotSettings FoldingBotSettings => foldingBotSettingsMonitor.CurrentValue;
@@ -39,7 +35,7 @@
         public async Task AnnounceUpcomingDistribution()
         {
             logger.LogDebug("Announcing the next distribution");
-            await Announce(service.GetDistributionAnnouncement(), FoldingBotSettings.Guild,
+            await Announce(await service.GetDistributionAnnouncement(), FoldingBotSettings.Guild,
                 FoldingBotSettings.AnnounceChannel);
         }
 
@@ -49,7 +45,7 @@
         [Summary("Change the distro date to a new date")]
         public Task ChangeDistroDate(DateTime date)
         {
-            return Reply(service.ChangeDistroDate(date));
+            return Reply(() => service.ChangeDistroDate(date));
         }
 
         [Command("donate")]
@@ -75,47 +71,47 @@
 
         [Command("network", RunMode = RunMode.Async)]
         [Summary("Show the FoldingCash network stats")]
-        public async Task GetNetworkStats()
+        public Task GetNetworkStats()
         {
-            await ReplyAsyncMode(() => service.GetNetworkStats());
+            return ReplyAsyncMode(service.GetNetworkStats);
         }
 
         [Command("distribution")]
         [Summary("Get the date of our next distribution")]
         public Task GetNextDistributionDate()
         {
-            return Reply(service.GetNextDistributionDate());
+            return Reply(service.GetNextDistributionDate);
         }
 
         [Command("top", RunMode = RunMode.Async)]
         [Summary("Show the top ten users that meet the FoldingCash requirements")]
-        public async Task GetTopUsers()
+        public Task GetTopUsers()
         {
-            await ReplyAsyncMode(() => service.GetTopUsers());
+            return ReplyAsyncMode(service.GetTopUsers);
         }
 
         [Command("user", RunMode = RunMode.Async)]
         [Usage("{address}")]
         [Summary("Get your stats so far this month based on your cashTokens address")]
-        public async Task GetUserStats(string cashTokensAddress)
+        public Task GetUserStats(string cashTokensAddress)
         {
-            await ReplyAsyncMode(() => service.GetUserStats(cashTokensAddress));
+            return ReplyAsyncMode(() => service.GetUserStats(cashTokensAddress));
         }
 
         [AdminOnly]
-        [Command("health")]
+        [Command("health", RunMode = RunMode.Async)]
         [Summary("Check if FoldingCash services are alive")]
-        public async Task HealthCheck()
+        public Task HealthCheck()
         {
-            await ReplyAsyncMode(() => service.HealthCheck());
+            return ReplyAsyncMode(service.HealthCheck);
         }
 
         [Command("lookup", RunMode = RunMode.Async)]
         [Usage("{search criteria}")]
         [Summary("Helps to find yourself, not case sensitive and searches the start and end of usernames for a match")]
-        public async Task LookupUser([Remainder] string searchCriteria)
+        public Task LookupUser([Remainder] string searchCriteria)
         {
-            await ReplyAsyncMode(() => service.LookupUser(searchCriteria));
+            return ReplyAsyncMode(() => service.LookupUser(searchCriteria));
         }
 
         [AdminOnly]
@@ -123,9 +119,9 @@
         [Command("verify")]
         [Usage("{btc address} {signature} {cash tokens address}")]
         [Summary("Verify yourself using your legacy Bitcoin address")]
-        public async Task VerifyUser(string bitcoinAddress, string signature, string cashTokensAddress)
+        public Task VerifyUser(string bitcoinAddress, string signature, string cashTokensAddress)
         {
-            await Task.Delay(0);
+            return Task.CompletedTask;
         }
     }
 }

@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Reflection;
     using System.Text;
     using System.Threading.Tasks;
     using Attributes;
@@ -22,7 +23,7 @@
 
         public BaseModule(ILogger<BaseModule> logger, IOptionsMonitor<BotSettings> botSettingsMonitor,
             IBotConfigurationService botConfigurationService, ICommandService commandService)
-            : base(logger, botSettingsMonitor, botConfigurationService)
+            : base(logger, botSettingsMonitor)
         {
             this.logger = logger;
             this.botSettingsMonitor = botSettingsMonitor;
@@ -56,15 +57,8 @@
         [Summary("Disables a specified command")]
         public async Task DisableCommand([Remainder] string commandName)
         {
-            CommandAttribute command = GetCommandAttribute();
-            if (commandName == command.Text)
-            {
-                logger.LogWarning("Disabling this command is not recommended...");
-                return;
-            }
-
-            command = GetCommandAttribute(nameof(EnableCommand));
-            if (commandName == command.Text)
+            if (GetCommandNames(nameof(DisableCommand)).Concat(GetCommandNames(nameof(EnableCommand)))
+                                                        .Contains(commandName))
             {
                 logger.LogWarning("Disabling this command is not recommended...");
                 return;
@@ -90,49 +84,51 @@
 
         [Command("help")]
         [Summary("Show the list of available commands")]
-        public async Task Help()
+        public Task Help()
         {
-            await Reply(Usage(Context));
+            return Reply(Usage(Context));
         }
 
         [Default]
         [Hidden]
         [Command("{default}")]
         [Summary("Show the list of available commands")]
-        public async Task NoCommand()
+        public Task NoCommand()
         {
-            await Reply(Usage(Context));
+            return Reply(Usage(Context));
+        }
+
+        private static IEnumerable<string> GetCommandNames(string methodName)
+        {
+            MethodInfo method = typeof(BaseModule).GetMethod(methodName);
+            string command = method?.GetCustomAttribute<CommandAttribute>()?.Text;
+            string[] aliases = method?.GetCustomAttribute<AliasAttribute>()?.Aliases ?? Array.Empty<string>();
+            return aliases.Prepend(command);
         }
 
         private void AppendAttributeText(CommandInfo command, StringBuilder builder)
         {
-            if (botConfigurationService.DisabledCommandsContains(command.Name))
+            if (command.IsDisabled(botConfigurationService))
             {
                 builder.Append("(Disabled) ");
             }
 
-            if (command.Attributes.Any(attribute => attribute is HiddenAttribute))
+            if (command.HasAttribute<HiddenAttribute>())
             {
                 builder.Append("(Hidden) ");
             }
 
-            if (command.Attributes.Any(attribute => attribute is AdminOnlyAttribute))
+            if (command.HasAttribute<AdminOnlyAttribute>())
             {
                 builder.Append("(Admin) ");
             }
         }
 
-        private IEnumerable<CommandInfo> GetCommands(SocketCommandContext context)
-        {
-            List<CommandInfo> commands = commandService.GetCommands(context).ToList();
-            commands.Sort((command1, command2) =>
-                string.Compare(command1.Name, command2.Name, StringComparison.CurrentCulture));
-            return commands;
-        }
-
         private string Usage(SocketCommandContext context)
         {
-            IEnumerable<CommandInfo> commandList = GetCommands(context);
+            IEnumerable<CommandInfo> commandList = commandService.GetCommands(context)
+                                                                 .OrderBy(command => command.Name,
+                                                                     StringComparer.CurrentCulture);
 
             var builder = new StringBuilder();
 
@@ -145,13 +141,11 @@
 
             foreach (CommandInfo command in commandList)
             {
-                var usageAttribute =
-                    command.Attributes.FirstOrDefault(attribute => attribute is UsageAttribute) as UsageAttribute;
-
                 builder.Append("\t");
                 AppendAttributeText(command, builder);
 
-                if (usageAttribute is default(UsageAttribute))
+                UsageAttribute usageAttribute = command.GetAttribute<UsageAttribute>();
+                if (usageAttribute is null)
                 {
                     builder.Append($"{command.Name} - {command.Summary}");
                 }

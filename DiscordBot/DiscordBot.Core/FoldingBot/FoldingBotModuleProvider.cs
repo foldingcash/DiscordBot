@@ -2,8 +2,8 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Globalization;
     using System.Linq;
-    using System.Net.Http;
     using System.Text;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
@@ -12,6 +12,8 @@
 
     public class FoldingBotModuleProvider : IFoldingBotModuleService
     {
+        private const string ApiDownMessage = "The api is down :( try again later";
+
         private const string DisplayDateFormat = "MM/dd/yyyy";
 
         private readonly IFoldingApiService foldingApiService;
@@ -20,48 +22,44 @@
 
         private readonly IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor;
 
-        private readonly IHttpClientFactory httpFactory;
-
         private readonly ILogger<FoldingBotModuleProvider> logger;
 
-        private Func<string, Task> reply = message => Task.CompletedTask;
+        private readonly TimeProvider timeProvider;
 
         public FoldingBotModuleProvider(ILogger<FoldingBotModuleProvider> logger,
             IOptionsMonitor<FoldingBotSettings> foldingBotSettingsMonitor,
             IFoldingBotConfigurationService foldingBotConfigurationService,
-            IHttpClientFactory httpFactory,
-            IFoldingApiService foldingApiService)
+            IFoldingApiService foldingApiService,
+            TimeProvider timeProvider)
         {
             this.logger = logger;
             this.foldingBotSettingsMonitor = foldingBotSettingsMonitor;
             this.foldingBotConfigurationService = foldingBotConfigurationService;
-            this.httpFactory = httpFactory;
             this.foldingApiService = foldingApiService;
+            this.timeProvider = timeProvider;
         }
 
         private FoldingBotSettings FoldingBotSettings =>
             foldingBotSettingsMonitor?.CurrentValue ?? new FoldingBotSettings();
 
-        public Func<string, Task> Reply
-        {
-            set => reply = value;
-        }
+        private DateTime UtcNow => timeProvider.GetUtcNow().UtcDateTime;
 
-        public string ChangeDistroDate(DateTime date)
+        public async Task<string> ChangeDistroDate(DateTime date)
         {
-            if (date.Date < DateTime.UtcNow.Date)
+            if (date.Date < UtcNow.Date)
             {
                 return "The provided date is in the past, distro date was not updated.";
             }
 
-            foldingBotConfigurationService.UpdateDistroDate(date.Date);
-            return $"New distro date is {foldingBotConfigurationService.GetDistroDate()?.ToShortDateString()}";
+            await foldingBotConfigurationService.UpdateDistroDate(date.Date);
+            logger.LogInformation("Distro date changed to {distroDate}", date.Date);
+            return $"New distro date is {FormatDate(date)}";
         }
 
-        public string GetDistributionAnnouncement()
+        public async Task<string> GetDistributionAnnouncement()
         {
-            DateTime distroDate = GetDistributionDate();
-            return $"Start folding now! The next distribution is {distroDate.ToShortDateString()}.";
+            DateTime distroDate = await GetDistributionDate();
+            return $"Start folding now! The next distribution is {FormatDate(distroDate)}.";
         }
 
         public string GetDonationLinks()
@@ -87,25 +85,23 @@
 
         public async Task<string> GetNetworkStats()
         {
-            DistroResponse distroResponse = await GetCurrentDistro();
+            (DistroResponse distroResponse, bool isLastMonth) = await GetCurrentDistro();
 
-            if (distroResponse == default)
+            if (distroResponse is null)
             {
-                return "The api is down :( try again later";
+                return ApiDownMessage;
             }
 
             var builder = new StringBuilder();
-            AppendDistroDate(builder, distroResponse);
+            AppendDistroHeader(builder, distroResponse, isLastMonth);
 
             if (distroResponse.DistroCount == 1)
             {
-                builder.AppendLine(
-                    $"There is {distroResponse.DistroCount} folder folding for FoldingCash");
+                builder.AppendLine($"There is {distroResponse.DistroCount} folder folding for FoldingCash");
             }
             else
             {
-                builder.AppendLine(
-                    $"There are {distroResponse.DistroCount} folders folding for FoldingCash");
+                builder.AppendLine($"There are {distroResponse.DistroCount} folders folding for FoldingCash");
             }
 
             builder.AppendLine($"We have folded {distroResponse.TotalPoints} points");
@@ -114,64 +110,49 @@
             return builder.ToString();
         }
 
-        public string GetNextDistributionDate()
+        public async Task<string> GetNextDistributionDate()
         {
-            DateTime now = DateTime.UtcNow;
-            DateTime distributionDate = GetDistributionDate();
-            DateTime endDistributionDate = distributionDate.AddDays(1).AddMinutes(-1);
+            DateTime distributionDate = await GetDistributionDate();
 
-            if (now < distributionDate)
-            {
-                // do nothing
-                logger.LogWarning("Now is before the distributionDate...didn't expect that!");
-            }
-            else if (now >= distributionDate && now <= endDistributionDate)
+            if (distributionDate == UtcNow.Date)
             {
                 return "The distribution is today!";
             }
-            else
-            {
-                DateTime nextMonth = now.AddMonths(1);
-                distributionDate = GetDistributionDate(nextMonth.Year, nextMonth.Month);
-            }
 
-            return $"The next distribution is {distributionDate.ToShortDateString()}";
+            return $"The next distribution is {FormatDate(distributionDate)}";
         }
 
         public async Task<string> GetTopUsers()
         {
-            string ShortenAddress(string address)
+            static string ShortenAddress(string address)
             {
                 const int length = 4;
-                string first = address.Substring(0, length);
-                string last = address.Substring(address.Length - length, length);
-                return $"{first}...{last}";
+                if (string.IsNullOrEmpty(address) || address.Length <= length * 2)
+                {
+                    return address;
+                }
+
+                return $"{address[..length]}...{address[^length..]}";
             }
 
-            decimal RoundAmount(decimal amount)
-            {
-                return Math.Round(amount, 2);
-            }
+            (DistroResponse distroResponse, bool isLastMonth) = await GetCurrentDistro();
 
-            DistroResponse distroResponse = await GetCurrentDistro();
-
-            if (distroResponse == default)
+            if (distroResponse is null)
             {
-                return "The api is down :( try again later";
+                return ApiDownMessage;
             }
 
             var builder = new StringBuilder();
-            AppendDistroDate(builder, distroResponse);
+            AppendDistroHeader(builder, distroResponse, isLastMonth);
 
-            int count = Math.Min(distroResponse.DistroCount ?? 0, 10);
-            builder.AppendLine($"The top {count} users are:");
+            List<DistroUser> topUsers = (distroResponse.Distro ?? new List<DistroUser>())
+                                        .OrderByDescending(user => user.PointsGained).Take(10).ToList();
+            builder.AppendLine($"The top {topUsers.Count} users are:");
 
-            IEnumerable<DistroUser> orderedUsers =
-                distroResponse.Distro.OrderByDescending(u => u.PointsGained).Take(count);
-            foreach (DistroUser user in orderedUsers)
+            foreach (DistroUser user in topUsers)
             {
                 builder.AppendLine(
-                    $"\t{ShortenAddress(user.CashTokensAddress)} : {user.PointsGained} points : {RoundAmount(user.Amount)}%");
+                    $"\t{ShortenAddress(user.CashTokensAddress)} : {user.PointsGained} points : {Math.Round(user.Amount, 2)}%");
             }
 
             return builder.ToString();
@@ -179,23 +160,23 @@
 
         public async Task<string> GetUserStats(string cashTokensAddress)
         {
-            DistroResponse distroResponse = await GetCurrentDistro();
+            (DistroResponse distroResponse, bool isLastMonth) = await GetCurrentDistro();
 
-            if (distroResponse == default)
+            if (distroResponse is null)
             {
-                return "The api is down :( try again later";
+                return ApiDownMessage;
             }
 
             DistroUser distroUser =
-                distroResponse.Distro.FirstOrDefault(user => user.CashTokensAddress == cashTokensAddress);
+                distroResponse.Distro?.FirstOrDefault(user => user.CashTokensAddress == cashTokensAddress);
 
-            if (distroUser == default)
+            if (distroUser is null)
             {
                 return "I was unable to find your CashTokens address. Ensure your address is correct and try again.";
             }
 
             var builder = new StringBuilder();
-            AppendDistroDate(builder, distroResponse);
+            AppendDistroHeader(builder, distroResponse, isLastMonth);
             builder.AppendLine($"Results for: {distroUser.CashTokensAddress}");
             builder.AppendLine($"\tPoints gained: {distroUser.PointsGained}");
             builder.AppendLine($"\tWork units gained: {distroUser.WorkUnitsGained}");
@@ -206,96 +187,110 @@
         public async Task<string> HealthCheck()
         {
             HealthResponse healthResponse = await foldingApiService.HealthCheck();
-
-            if (healthResponse == default)
-            {
-                return "The bot is Health. The API is Unhealthy.";
-            }
-
-            return $"The bot is Healthy. The API is {healthResponse.Status}.";
+            return $"The bot is Healthy. The API is {healthResponse?.Status ?? "Unhealthy"}.";
         }
 
         public async Task<string> LookupUser(string searchCriteria)
         {
+            const int maxUsers = 5;
+
             MembersResponse membersResponse = await foldingApiService.GetAllMembers();
 
-            if (membersResponse == default)
+            if (membersResponse?.Members is null)
             {
-                return "The api is down :( try again later";
+                return ApiDownMessage;
             }
 
-            List<Member> matchingMembers = membersResponse.Members.Where(member =>
-                member.UserName.StartsWith(searchCriteria, StringComparison.CurrentCultureIgnoreCase)
-                || member.UserName.EndsWith(searchCriteria, StringComparison.CurrentCultureIgnoreCase)).ToList();
+            List<string> matchingUserNames = membersResponse.Members
+                                                            .Select(member => member.UserName)
+                                                            .Where(userName => userName != null
+                                                                && (userName.StartsWith(searchCriteria,
+                                                                        StringComparison.CurrentCultureIgnoreCase)
+                                                                    || userName.EndsWith(searchCriteria,
+                                                                        StringComparison.CurrentCultureIgnoreCase)))
+                                                            .Distinct()
+                                                            .ToList();
 
-            if (!matchingMembers?.Any() ?? true)
+            if (matchingUserNames.Count == 0)
             {
                 return "No matches found. Ensure you are searching the start or ending of your username and try again.";
             }
 
-            const int maxUsers = 5;
             var response = new StringBuilder();
             response.AppendLine(
-                $"Showing {(matchingMembers.Count > maxUsers ? maxUsers : 5)} of {matchingMembers.Count} matches:");
-            response.AppendJoin(Environment.NewLine,
-                matchingMembers.Select(member => member.UserName).Distinct().Take(5));
+                $"Showing {Math.Min(maxUsers, matchingUserNames.Count)} of {matchingUserNames.Count} matches:");
+            response.AppendJoin(Environment.NewLine, matchingUserNames.Take(maxUsers));
 
             return response.ToString();
         }
 
-        private void AppendDistroDate(StringBuilder builder, DistroResponse distroResponse)
+        private static void AppendDistroHeader(StringBuilder builder, DistroResponse distroResponse, bool isLastMonth)
         {
+            if (isLastMonth)
+            {
+                builder.AppendLine("This month's stats are not yet available...showing last month");
+            }
+
             builder.AppendLine(
-                $"Start: {distroResponse.Start.ToString(DisplayDateFormat)} End: {distroResponse.End.ToString(DisplayDateFormat)}");
+                $"Start: {FormatDate(distroResponse.Start)} End: {FormatDate(distroResponse.End)}");
         }
 
-        private async Task<DistroResponse>
-            GetCurrentDistro()
+        private static string FormatDate(DateTime date)
         {
-            DateTime now = DateTime.UtcNow;
+            return date.ToString(DisplayDateFormat, CultureInfo.InvariantCulture);
+        }
+
+        private static DateTime GetFirstSaturday(int year, int month)
+        {
+            var date = new DateTime(year, month, 1);
+            int daysUntilSaturday = ((int) DayOfWeek.Saturday - (int) date.DayOfWeek + 7) % 7;
+            return date.AddDays(daysUntilSaturday);
+        }
+
+        private async Task<(DistroResponse response, bool isLastMonth)> GetCurrentDistro()
+        {
+            DateTime now = UtcNow;
             var startDate = new DateTime(now.Year, now.Month, 1);
             DateTime endDate = now;
+            var isLastMonth = false;
 
+            // The API needs a couple days into the month before it has stats to report
             if (now.Day < 3)
             {
-                await reply("This month's stats are not yet available...showing last month");
+                isLastMonth = true;
                 startDate = startDate.AddMonths(-1);
                 endDate = new DateTime(startDate.Year, startDate.Month,
                     DateTime.DaysInMonth(startDate.Year, startDate.Month));
             }
 
             DistroResponse response = await foldingApiService.GetDistro(startDate, endDate, 100);
-            return response;
+            return (response, isLastMonth);
         }
 
-        private DateTime GetDistributionDate()
+        /// <summary>
+        ///     The next distribution is the admin configured date when set, otherwise the first Saturday of the month.
+        /// </summary>
+        private async Task<DateTime> GetDistributionDate()
         {
-            DateTime now = DateTime.UtcNow.Date;
-            DateTime defaultDistroDate = GetDistributionDate(now.Year, now.Month);
-            DateTime distributionDate = foldingBotConfigurationService.GetDistroDate() ?? defaultDistroDate;
-            DateTime endDistributionDate = distributionDate.AddDays(1).AddMinutes(-1);
+            DateTime today = UtcNow.Date;
 
-            if (now > endDistributionDate)
+            DateTime? configuredDate = foldingBotConfigurationService.GetDistroDate()?.Date;
+            if (configuredDate < today)
             {
-                DateTime nextMonth = now.AddMonths(1);
-                distributionDate = GetDistributionDate(nextMonth.Year, nextMonth.Month);
-
-                if (foldingBotConfigurationService.GetDistroDate() <= defaultDistroDate)
-                {
-                    foldingBotConfigurationService.ClearDistroDate();
-                }
+                await foldingBotConfigurationService.ClearDistroDate();
+                configuredDate = null;
             }
 
-            return distributionDate;
-        }
-
-        private DateTime GetDistributionDate(int year, int month)
-        {
-            var distributionDate = new DateTime(year, month, 1);
-
-            while (distributionDate.DayOfWeek != DayOfWeek.Saturday)
+            if (configuredDate.HasValue)
             {
-                distributionDate = distributionDate.AddDays(1);
+                return configuredDate.Value;
+            }
+
+            DateTime distributionDate = GetFirstSaturday(today.Year, today.Month);
+            if (distributionDate < today)
+            {
+                DateTime nextMonth = today.AddMonths(1);
+                distributionDate = GetFirstSaturday(nextMonth.Year, nextMonth.Month);
             }
 
             return distributionDate;

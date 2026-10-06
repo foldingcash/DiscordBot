@@ -5,11 +5,9 @@
 
     public interface IFoldingBotModuleService
     {
-        Func<string, Task> Reply { set; }
+        Task<string> ChangeDistroDate(DateTime date);
 
-        string ChangeDistroDate(DateTime date);
-
-        string GetDistributionAnnouncement();
+        Task<string> GetDistributionAnnouncement();
 
         string GetDonationLinks();
 
@@ -19,11 +17,11 @@
 
         Task<string> GetNetworkStats();
 
-        string GetNextDistributionDate();
+        Task<string> GetNextDistributionDate();
 
         Task<string> GetTopUsers();
 
-        Task<string> GetUserStats(string bitcoinAddress);
+        Task<string> GetUserStats(string cashTokensAddress);
 
         Task<string> HealthCheck();
 
