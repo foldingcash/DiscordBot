@@ -2,9 +2,10 @@
 {
     using System;
     using System.Collections.Specialized;
-    using System.IO;
+    using System.Globalization;
     using System.Net;
     using System.Net.Http;
+    using System.Net.Http.Json;
     using System.Text.Json;
     using System.Threading.Tasks;
     using System.Web;
@@ -14,6 +15,13 @@
     public class FoldingApiProvider : IFoldingApiService
     {
         private const string ApiDateFormat = "MM/dd/yyyy";
+
+        private const int DefaultRetryAttempts = 3;
+
+        private static readonly TimeSpan RetryDelay = TimeSpan.FromMinutes(5);
+
+        private static readonly JsonSerializerOptions SerializerOptions =
+            new JsonSerializerOptions(JsonSerializerDefaults.Web);
 
         private readonly IHttpClientFactory httpFactory;
 
@@ -25,98 +33,82 @@
             this.httpFactory = httpFactory;
         }
 
-        public async Task<MembersResponse> GetAllMembers()
+        public Task<MembersResponse> GetAllMembers()
         {
             var endpoint = new Uri("v1/GetMembers/All", UriKind.Relative);
-            var response = await CallApi<MembersResponse>(endpoint, 3);
-            return response;
+            return CallApi<MembersResponse>(endpoint, DefaultRetryAttempts);
         }
 
-        public async Task<DistroResponse>
-            GetDistro(DateTime startDate, DateTime endDate, int amount)
+        public Task<DistroResponse> GetDistro(DateTime startDate, DateTime endDate, int amount)
         {
             const int cashTokenUsers = 8;
             NameValueCollection query = HttpUtility.ParseQueryString(string.Empty);
-            query.Add("startDate", startDate.ToString(ApiDateFormat));
-            query.Add("endDate", endDate.ToString(ApiDateFormat));
-            query.Add("amount", amount.ToString());
-            query.Add("includeFoldingUserTypes", cashTokenUsers.ToString());
-            var endpoint =
-                new Uri(
-                    $"v1/GetDistro?{query}",
-                    UriKind.Relative);
+            query.Add("startDate", startDate.ToString(ApiDateFormat, CultureInfo.InvariantCulture));
+            query.Add("endDate", endDate.ToString(ApiDateFormat, CultureInfo.InvariantCulture));
+            query.Add("amount", amount.ToString(CultureInfo.InvariantCulture));
+            query.Add("includeFoldingUserTypes", cashTokenUsers.ToString(CultureInfo.InvariantCulture));
+            var endpoint = new Uri($"v1/GetDistro?{query}", UriKind.Relative);
 
-            var response = await CallApi<DistroResponse>(endpoint, 3);
-            return response;
+            return CallApi<DistroResponse>(endpoint, DefaultRetryAttempts);
         }
 
-        public async Task<HealthResponse> HealthCheck()
+        public Task<HealthResponse> HealthCheck()
         {
             var endpoint = new Uri("health/details", UriKind.Relative);
-            var response = await CallApi<HealthResponse>(endpoint);
-            return response;
+            return CallApi<HealthResponse>(endpoint);
         }
 
-        private async Task<T> CallApi<T>(Uri endpoint, int retryAttempts = 0, int sleepInSeconds = 300)
+        private static bool IsTimeout(HttpStatusCode statusCode)
         {
-            try
+            return statusCode == HttpStatusCode.BadGateway || statusCode == HttpStatusCode.GatewayTimeout
+                                                           || statusCode == HttpStatusCode.RequestTimeout;
+        }
+
+        private async Task<T> CallApi<T>(Uri endpoint, int retryAttempts = 0)
+        {
+            for (var attempt = 0;; attempt++)
             {
-                using HttpClient client = httpFactory.CreateClient(ClientTypes.FoldingCashApi);
+                bool canRetry = attempt < retryAttempts;
 
-                logger.LogDebug("Starting GET from URI: {URI}", endpoint.ToString());
-
-                using HttpResponseMessage httpResponse = await client.GetAsync(endpoint);
-
-                logger.LogDebug("Finished GET from URI");
-
-                if (!httpResponse.IsSuccessStatusCode)
+                try
                 {
+                    using HttpClient client = httpFactory.CreateClient(ClientTypes.FoldingCashApi);
+
+                    logger.LogDebug("Starting GET from URI: {URI}", endpoint);
+
+                    using HttpResponseMessage httpResponse = await client.GetAsync(endpoint);
+
+                    logger.LogDebug("Finished GET from URI");
+
+                    if (httpResponse.IsSuccessStatusCode)
+                    {
+                        if (logger.IsEnabled(LogLevel.Trace))
+                        {
+                            string content = await httpResponse.Content.ReadAsStringAsync();
+                            logger.LogTrace("responseContent: {responseContent}", content);
+                        }
+
+                        return await httpResponse.Content.ReadFromJsonAsync<T>(SerializerOptions);
+                    }
+
                     string responseContent = await httpResponse.Content.ReadAsStringAsync();
                     logger.LogError("The response status code: {statusCode} responseContent: {responseContent}",
                         httpResponse.StatusCode, responseContent);
 
-                    if (IsTimeout(httpResponse.StatusCode) && retryAttempts > 0)
+                    if (!IsTimeout(httpResponse.StatusCode) || !canRetry)
                     {
-                        logger.LogDebug("Going to attempt to download again after sleeping");
-                        await Task.Delay(sleepInSeconds * 1000);
-                        return await CallApi<T>(endpoint, --retryAttempts);
+                        return default;
                     }
-
-                    return default;
                 }
-
-                if (logger.IsEnabled(LogLevel.Trace))
+                catch (TaskCanceledException exception) when (canRetry)
                 {
-                    string responseContent = await httpResponse.Content.ReadAsStringAsync();
-                    logger.LogTrace("responseContent: {responseContent}", responseContent);
+                    logger.LogWarning(exception, "The request timed out");
                 }
 
-                await using Stream contentStream = await httpResponse.Content.ReadAsStreamAsync();
-                var response = await JsonSerializer.DeserializeAsync<T>(contentStream,
-                    new JsonSerializerOptions
-                    {
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                    });
-                return response;
+                // The client and response are disposed before waiting to retry
+                logger.LogDebug("Going to attempt to download again after sleeping");
+                await Task.Delay(RetryDelay);
             }
-            catch (TaskCanceledException exception)
-            {
-                if (retryAttempts > 0)
-                {
-                    logger.LogWarning(exception, "Going to attempt to download again after sleeping");
-                    await Task.Delay(sleepInSeconds * 1000);
-                    return await CallApi<T>(endpoint, --retryAttempts);
-                }
-
-                logger.LogError(exception, "There was an unhandled exception");
-                throw;
-            }
-        }
-
-        private bool IsTimeout(HttpStatusCode statusCode)
-        {
-            return statusCode == HttpStatusCode.BadGateway || statusCode == HttpStatusCode.GatewayTimeout
-                                                           || statusCode == HttpStatusCode.RequestTimeout;
         }
     }
 }

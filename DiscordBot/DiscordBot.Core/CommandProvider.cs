@@ -31,6 +31,7 @@
             IBotConfigurationService botConfigurationService)
         {
             innerService = new CommandService(new CommandServiceConfig());
+            innerService.Log += logger.LogDiscordMessage;
 
             this.logger = logger;
             this.services = services;
@@ -39,7 +40,7 @@
             this.botConfigurationService = botConfigurationService;
         }
 
-        private FoldingBotSettings foldingBotSettings =>
+        private FoldingBotSettings FoldingBotSettings =>
             foldingBotSettingsMonitor?.CurrentValue ?? new FoldingBotSettings();
 
         public async Task AddModulesAsync()
@@ -49,13 +50,13 @@
                 await innerService.AddModuleAsync<TestingBotModule>(services);
             }
 
-            await Task.WhenAll(innerService.AddModuleAsync<FoldingBotModule>(services),
-                innerService.AddModuleAsync<BaseModule>(services));
+            await innerService.AddModuleAsync<FoldingBotModule>(services);
+            await innerService.AddModuleAsync<BaseModule>(services);
         }
 
         public async Task<IResult> ExecuteAsync(SocketCommandContext commandContext, int argumentPosition)
         {
-            if (!commandContext.IsPrivate && commandContext.Channel.Name != GetBotChannel())
+            if (!IsBotChannel(commandContext))
             {
                 return ExecuteResult.FromSuccess();
             }
@@ -67,19 +68,21 @@
                 return await ExecuteDefaultResponse(commandContext, argumentPosition);
             }
 
-            bool matchIsDevCommand = searchResult.Commands.Any(command =>
-                command.Command.Attributes.Any(attribute => attribute is DevelopmentAttribute));
+            IReadOnlyList<CommandInfo> matches = searchResult.Commands.Select(match => match.Command).ToList();
 
-            if (matchIsDevCommand && !environment.IsDevelopment())
+            if (matches.Any(command => command.HasAttribute<DevelopmentAttribute>()) && !environment.IsDevelopment())
             {
                 return ExecuteResult.FromSuccess();
             }
 
-            bool matchIsAdminCommand = searchResult.Commands.Any(command =>
-                command.Command.Attributes.Any(attribute => attribute is AdminOnlyAttribute));
-
-            if (matchIsAdminCommand && !IsAdminRequesting(commandContext))
+            if (matches.Any(command => command.HasAttribute<AdminOnlyAttribute>()) && !IsAdminRequesting(commandContext))
             {
+                return ExecuteResult.FromSuccess();
+            }
+
+            if (matches.Any(command => command.IsDisabled(botConfigurationService)))
+            {
+                logger.LogDebug("Ignoring disabled command: {command}", matches[0].Name);
                 return ExecuteResult.FromSuccess();
             }
 
@@ -88,15 +91,15 @@
 
         public async Task<IResult> ExecuteDefaultResponse(SocketCommandContext commandContext, int argumentPosition)
         {
-            if (!commandContext.IsPrivate && commandContext.Channel.Name != GetBotChannel())
+            if (!IsBotChannel(commandContext))
             {
                 return ExecuteResult.FromSuccess();
             }
 
-            CommandInfo defaultCommand = innerService.Commands.FirstOrDefault(command =>
-                command.Attributes.Any(attribute => attribute is DefaultAttribute));
+            CommandInfo defaultCommand =
+                innerService.Commands.FirstOrDefault(command => command.HasAttribute<DefaultAttribute>());
 
-            if (defaultCommand is default(CommandInfo))
+            if (defaultCommand is null)
             {
                 return ExecuteResult.FromSuccess();
             }
@@ -110,44 +113,31 @@
             if (IsAdminDirectMessage(context))
             {
                 return innerService.Commands.Where(command =>
-                    command.Attributes.All(attribute =>
-                        !(attribute is DevelopmentAttribute)) || environment.IsDevelopment());
+                    !command.HasAttribute<DevelopmentAttribute>() || environment.IsDevelopment());
             }
 
-            return innerService.Commands
-                               .Where(command =>
-                                   command.Attributes.All(attribute =>
-                                       !(attribute is DefaultAttribute)))
-                               .Where(command =>
-                                   command.Attributes.All(attribute =>
-                                       !(attribute is HiddenAttribute)))
-                               .Where(command =>
-                                   command.Attributes.All(attribute =>
-                                       !(attribute is DevelopmentAttribute)))
-                               .Where(command =>
-                                   command.Attributes.All(attribute =>
-                                       !(attribute is DeprecatedAttribute)))
-                               .Where(command =>
-                                   command.Attributes.All(attribute =>
-                                       !(attribute is AdminOnlyAttribute)))
-                               .Where(command =>
-                                   !botConfigurationService.DisabledCommandsContains(
-                                       command.Name));
-        }
-
-        private string GetBotChannel()
-        {
-            return foldingBotSettings.BotChannel;
+            return innerService.Commands.Where(command =>
+                !command.HasAttribute<DefaultAttribute>()
+                && !command.HasAttribute<HiddenAttribute>()
+                && !command.HasAttribute<DevelopmentAttribute>()
+                && !command.HasAttribute<DeprecatedAttribute>()
+                && !command.HasAttribute<AdminOnlyAttribute>()
+                && !command.IsDisabled(botConfigurationService));
         }
 
         private bool IsAdminDirectMessage(SocketCommandContext commandContext)
         {
-            return foldingBotSettings.AdminUser == commandContext.Message.Author.Id && commandContext.IsPrivate;
+            return commandContext.IsPrivate && IsAdminRequesting(commandContext);
         }
 
         private bool IsAdminRequesting(SocketCommandContext commandContext)
         {
-            return foldingBotSettings.AdminUser == commandContext.Message.Author.Id;
+            return FoldingBotSettings.AdminUser == commandContext.Message.Author.Id;
+        }
+
+        private bool IsBotChannel(SocketCommandContext commandContext)
+        {
+            return commandContext.IsPrivate || commandContext.Channel.Name == FoldingBotSettings.BotChannel;
         }
     }
 }

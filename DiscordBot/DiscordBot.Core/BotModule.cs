@@ -1,9 +1,9 @@
 ﻿namespace DiscordBot.Core
 {
     using System;
-    using System.Collections.Generic;
     using System.Linq;
     using System.Runtime.CompilerServices;
+    using System.Threading;
     using System.Threading.Tasks;
     using Discord;
     using Discord.Commands;
@@ -13,23 +13,17 @@
 
     internal class BotModule : ModuleBase<SocketCommandContext>
     {
-        private static readonly object AsyncLock = new object();
+        private static readonly SemaphoreSlim LongRunningLock = new SemaphoreSlim(1, 1);
 
-        private static bool isRunningAsyncMethod;
-
-        private readonly IBotConfigurationService botConfigurationService;
+        private static readonly Emoji Hourglass = new Emoji("⏳");
 
         private readonly IOptionsMonitor<BotSettings> botSettingsMonitor;
 
-        private readonly Emoji hourglass = new Emoji("\u23F3");
-
         private readonly ILogger logger;
 
-        public BotModule(ILogger logger,
-            IOptionsMonitor<BotSettings> botSettingsMonitor, IBotConfigurationService botConfigurationService)
+        public BotModule(ILogger logger, IOptionsMonitor<BotSettings> botSettingsMonitor)
         {
             this.logger = logger;
-            this.botConfigurationService = botConfigurationService;
             this.botSettingsMonitor = botSettingsMonitor;
         }
 
@@ -37,39 +31,31 @@
 
         protected async Task Announce(string message, string announceGuild, string announceChannel)
         {
-            IReadOnlyCollection<SocketGuild> guilds = Context.Client.Guilds;
-            SocketGuild guild = guilds.FirstOrDefault(g => g.Name == announceGuild);
-            IReadOnlyCollection<SocketTextChannel> channels = guild?.TextChannels;
-            SocketTextChannel channel = channels?.FirstOrDefault(c => c.Name == announceChannel);
+            SocketGuild guild = Context.Client.Guilds.FirstOrDefault(g => g.Name == announceGuild);
+            SocketTextChannel channel = guild?.TextChannels.FirstOrDefault(c => c.Name == announceChannel);
 
-            await (channel?.SendMessageAsync(message) ?? Task.CompletedTask);
+            if (channel is null)
+            {
+                logger.LogWarning("Unable to find the announce channel {guild}/{channel}", announceGuild,
+                    announceChannel);
+                return;
+            }
+
+            await channel.SendMessageAsync(message);
         }
 
-        protected CommandAttribute GetCommandAttribute([CallerMemberName] string methodName = "")
+        protected Task Reply(string message, [CallerMemberName] string methodName = "")
         {
-            return GetType().GetMethod(methodName)?.GetCustomAttributes(true).OfType<CommandAttribute>()
-                            .FirstOrDefault();
-        }
-
-        protected async Task Reply(string message, [CallerMemberName] string methodName = "")
-        {
-            await Reply(() => Task.FromResult(message), methodName);
+            return Reply(() => Task.FromResult(message), methodName);
         }
 
         protected async Task Reply(Func<Task<string>> getMessage, [CallerMemberName] string methodName = "")
         {
-            CommandAttribute commandAttribute = GetCommandAttribute(methodName);
-
-            if (botConfigurationService.DisabledCommandsContains(commandAttribute?.Text))
-            {
-                return;
-            }
-
             try
             {
                 logger.LogInformation("Method Invoked: {methodName}", methodName);
 
-                await Context.Message.AddReactionAsync(hourglass);
+                await Context.Message.AddReactionAsync(Hourglass);
 
                 await ReplyAsync(await getMessage.Invoke());
 
@@ -85,8 +71,7 @@
             {
                 try
                 {
-                    await Context.Message.RemoveReactionAsync(hourglass, Context.Client.CurrentUser,
-                        RequestOptions.Default);
+                    await Context.Message.RemoveReactionAsync(Hourglass, Context.Client.CurrentUser);
                 }
                 catch (Exception ex)
                 {
@@ -95,31 +80,25 @@
             }
         }
 
+        /// <summary>
+        ///     Replies with the result of a long running request, only allowing one such request at a time.
+        /// </summary>
         protected async Task ReplyAsyncMode(Func<Task<string>> getMessage, [CallerMemberName] string methodName = "")
         {
-            var runAsync = true;
-
-            lock (AsyncLock)
+            if (!await LongRunningLock.WaitAsync(0))
             {
-                if (isRunningAsyncMethod)
-                {
-                    runAsync = false;
-                }
-                else
-                {
-                    isRunningAsyncMethod = true;
-                }
+                await Reply("Wait until the bot has finished responding to another user's long running request.",
+                    methodName);
+                return;
             }
 
-            if (runAsync)
+            try
             {
                 await Reply(getMessage, methodName);
-
-                isRunningAsyncMethod = false;
             }
-            else
+            finally
             {
-                await Reply("Wait until the bot has finished responding to another user's long running request.");
+                LongRunningLock.Release();
             }
         }
 
@@ -127,7 +106,12 @@
         {
             try
             {
-                var user = await Context.Client.GetUserAsync(BotSettings.AdminUser);
+                if (message.Length > DiscordConfig.MaxMessageSize)
+                {
+                    message = message.Substring(0, DiscordConfig.MaxMessageSize);
+                }
+
+                IUser user = await Context.Client.GetUserAsync(BotSettings.AdminUser);
                 await user.SendMessageAsync(message);
             }
             catch (Exception ex)

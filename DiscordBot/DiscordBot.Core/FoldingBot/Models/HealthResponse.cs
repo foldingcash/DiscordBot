@@ -1,5 +1,6 @@
 ﻿namespace DiscordBot.Core.FoldingBot.Models
 {
+    using System;
     using System.Collections.Generic;
 
     public class HealthResponse
@@ -24,5 +25,13 @@
         public string Status { get; set; }
 
         public List<string> Tags { get; set; }
+    }
+
+    public static class HealthResponseExtensions
+    {
+        public static bool IsHealthy(this HealthResponse response)
+        {
+            return string.Equals(response?.Status, "Healthy", StringComparison.OrdinalIgnoreCase);
+        }
     }
 }

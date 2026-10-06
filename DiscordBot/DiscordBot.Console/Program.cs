@@ -3,7 +3,9 @@
     using System;
     using Core;
     using Core.FoldingBot;
+    using Discord;
     using Discord.WebSocket;
+    using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Options;
@@ -12,40 +14,46 @@
     {
         public static void Main(string[] args)
         {
-            CreateHostBuilder(args).Build().Run();
+            HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+            ConfigureServices(builder.Services, builder.Configuration);
+            builder.Build().Run();
         }
 
-        private static IHostBuilder CreateHostBuilder(string[] args)
+        private static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
         {
-            return Host.CreateDefaultBuilder(args).UseWindowsService().ConfigureServices((context, services) =>
+            services.AddWindowsService();
+
+            services.AddHttpClient(ClientTypes.FoldingCashApi, (serviceProvider, client) =>
             {
-                services.AddHttpClient(ClientTypes.FoldingCashApi, (serviceProvider, client) =>
-                {
-                    var settings = serviceProvider.GetRequiredService<IOptions<FoldingBotSettings>>();
-                    var foldingApiUri = new Uri(settings.Value.FoldingApiUri, UriKind.Absolute);
-                    client.BaseAddress = foldingApiUri;
-                });
-
-                services.AddSingleton(_ => new DiscordSocketClient(new DiscordSocketConfig
-                {
-                    AlwaysDownloadUsers = true
-                }));
-
-                services
-                    .AddHostedService<Bot>()
-                    .AddSingleton<ICommandService, CommandProvider>()
-                    .Configure<BotSettings>(context.Configuration.GetSection("AppSettings"));
-
-                services
-                    .Configure<FoldingBotSettings>(context.Configuration.GetSection("AppSettings"))
-                    .Configure<FoldingCashApiTimerSettings>(context.Configuration.GetSection(nameof(FoldingCashApiTimerSettings)))
-                    .AddSingleton<IFoldingBotConfigurationService, FoldingBotConfigurationProvider>()
-                    .AddSingleton<IBotConfigurationService>(provider =>
-                        provider.GetRequiredService<IFoldingBotConfigurationService>())
-                    .AddSingleton<IFoldingApiService, FoldingApiProvider>()
-                    .AddSingleton<IBotTimerService, FoldingCashApiTimerProvider>()
-                    .AddSingleton<IFoldingBotModuleService, FoldingBotModuleProvider>();
+                var settings = serviceProvider.GetRequiredService<IOptions<FoldingBotSettings>>();
+                client.BaseAddress = new Uri(settings.Value.FoldingApiUri, UriKind.Absolute);
             });
+
+            // MessageContent is a privileged intent, it must also be enabled in the Discord Developer Portal.
+            // It is needed to read "!" prefixed commands in guild channels; mentions and DMs work without it.
+            services.AddSingleton(_ => new DiscordSocketClient(new DiscordSocketConfig
+            {
+                GatewayIntents = GatewayIntents.Guilds
+                                 | GatewayIntents.GuildMessages
+                                 | GatewayIntents.DirectMessages
+                                 | GatewayIntents.MessageContent
+            }));
+
+            services
+                .AddSingleton(TimeProvider.System)
+                .AddHostedService<Bot>()
+                .AddSingleton<ICommandService, CommandProvider>()
+                .Configure<BotSettings>(configuration.GetSection("AppSettings"));
+
+            services
+                .Configure<FoldingBotSettings>(configuration.GetSection("AppSettings"))
+                .Configure<FoldingCashApiTimerSettings>(configuration.GetSection(nameof(FoldingCashApiTimerSettings)))
+                .AddSingleton<IFoldingBotConfigurationService, FoldingBotConfigurationProvider>()
+                .AddSingleton<IBotConfigurationService>(provider =>
+                    provider.GetRequiredService<IFoldingBotConfigurationService>())
+                .AddSingleton<IFoldingApiService, FoldingApiProvider>()
+                .AddSingleton<IBotTimerService, FoldingCashApiTimerProvider>()
+                .AddSingleton<IFoldingBotModuleService, FoldingBotModuleProvider>();
         }
     }
 }
