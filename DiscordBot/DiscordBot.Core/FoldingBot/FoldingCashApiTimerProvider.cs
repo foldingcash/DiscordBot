@@ -1,35 +1,39 @@
 ﻿namespace DiscordBot.Core.FoldingBot
 {
     using System;
-    using System.Timers;
+    using System.Threading;
     using Discord;
     using Discord.WebSocket;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using Models;
+    using Timer = System.Timers.Timer;
+    using ElapsedEventArgs = System.Timers.ElapsedEventArgs;
 
     public class FoldingCashApiTimerProvider : IBotTimerService
     {
-        private readonly IOptions<BotSettings> botSetttings;
+        private readonly IOptions<BotSettings> botSettings;
 
         private readonly DiscordSocketClient client;
+
+        private readonly Timer cooldown;
 
         private readonly IFoldingApiService foldingApiService;
 
         private readonly ILogger logger;
 
-        private Timer cooldown;
+        private readonly Timer timer;
 
-        private Timer timer;
+        private int isCheckingHealth;
 
         public FoldingCashApiTimerProvider(ILogger<FoldingCashApiTimerProvider> logger,
-            IOptions<BotSettings> botSetttings,
+            IOptions<BotSettings> botSettings,
             IOptions<FoldingCashApiTimerSettings> timerSettings,
             DiscordSocketClient client,
             IFoldingApiService foldingApiService)
         {
             this.logger = logger;
-            this.botSetttings = botSetttings;
+            this.botSettings = botSettings;
             this.client = client;
             this.foldingApiService = foldingApiService;
 
@@ -52,11 +56,8 @@
 
         public void Dispose()
         {
-            timer?.Dispose();
-            timer = null;
-
-            cooldown?.Dispose();
-            cooldown = null;
+            timer.Dispose();
+            cooldown.Dispose();
         }
 
         public void Start()
@@ -74,16 +75,26 @@
         private void Cooldown(object sender, ElapsedEventArgs e)
         {
             logger.LogInformation("Main timer has cooled down, starting main timer");
-            cooldown.Stop();
             timer.Start();
         }
 
         private async void Elapsed(object sender, ElapsedEventArgs e)
         {
-            logger.LogInformation("Main timer elapsed, doing work");
-            if (client.ConnectionState == ConnectionState.Connected)
+            // The health check can take longer than the interval, skip this tick if one is still running
+            if (Interlocked.Exchange(ref isCheckingHealth, 1) == 1)
             {
-                IUser admin = await client.GetUserAsync(botSetttings.Value.AdminUser);
+                return;
+            }
+
+            try
+            {
+                logger.LogInformation("Main timer elapsed, doing work");
+                if (client.ConnectionState != ConnectionState.Connected)
+                {
+                    return;
+                }
+
+                IUser admin = await client.GetUserAsync(botSettings.Value.AdminUser);
                 if (admin == null)
                 {
                     return;
@@ -91,13 +102,21 @@
 
                 HealthResponse response = await foldingApiService.HealthCheck();
 
-                if (response == null ||
-                    !string.Equals(response.Status, "Healthy", StringComparison.CurrentCultureIgnoreCase))
+                if (!response.IsHealthy())
                 {
-                    await admin.SendMessageAsync("Bro....the API is down.");
                     timer.Stop();
                     cooldown.Start();
+                    await admin.SendMessageAsync("Bro....the API is down.");
                 }
+            }
+            catch (Exception ex)
+            {
+                // Exceptions escaping an async void handler would crash the process
+                logger.LogError(ex, "There was an unhandled exception while checking the API health");
+            }
+            finally
+            {
+                Interlocked.Exchange(ref isCheckingHealth, 0);
             }
         }
     }

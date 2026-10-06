@@ -1,6 +1,6 @@
 ﻿namespace DiscordBot.Core
 {
-    public class ClientTypes
+    public static class ClientTypes
     {
         public const string FoldingCashApi = nameof(FoldingCashApi);
     }

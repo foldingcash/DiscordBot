@@ -1,19 +1,18 @@
 ﻿namespace DiscordBot.Core
 {
     using System;
-    using System.Diagnostics;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Discord;
     using Discord.Commands;
     using Discord.WebSocket;
-    using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
 
-    public class Bot : IHostedService, IDisposable
+    public class Bot : IHostedService
     {
         private readonly IBotConfigurationService botConfigurationService;
 
@@ -27,13 +26,11 @@
 
         private readonly ILogger<Bot> logger;
 
-        private bool disposed;
-
-        private IBotTimerService[] timers;
+        private readonly IReadOnlyList<IBotTimerService> timers;
 
         public Bot(ICommandService commandService, ILogger<Bot> logger, IHostEnvironment environment,
             IOptionsMonitor<BotSettings> botSettingsMonitor, IBotConfigurationService botConfigurationService,
-            IServiceProvider serviceProvider, DiscordSocketClient client)
+            IEnumerable<IBotTimerService> timers, DiscordSocketClient client)
         {
             this.commandService = commandService;
             this.logger = logger;
@@ -41,50 +38,31 @@
             this.botSettingsMonitor = botSettingsMonitor;
             this.botConfigurationService = botConfigurationService;
             this.client = client;
-
-            timers = serviceProvider.GetServices<IBotTimerService>().ToArray();
-            disposed = false;
+            this.timers = timers.ToList();
         }
 
         private BotSettings BotSettings => botSettingsMonitor?.CurrentValue ?? new BotSettings();
 
-        public void Dispose()
-        {
-            if (disposed)
-            {
-                return;
-            }
-
-            for (var i = 0; i < timers.Length; i++)
-            {
-                timers[i]?.Dispose();
-                timers[i] = null;
-            }
-
-            timers = null;
-            disposed = true;
-        }
-
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            if (disposed)
-            {
-                throw new ObjectDisposedException(nameof(Bot), "Start performed after disposing");
-            }
-
             try
             {
-                LogStartup();
+                logger.LogInformation("Bot starting");
+                logger.LogInformation("Hosting environment: {environment} PID: {PID}", environment.EnvironmentName,
+                    Environment.ProcessId);
+
                 await botConfigurationService.ReadConfiguration();
                 await commandService.AddModulesAsync();
+
+                client.Log += logger.LogDiscordMessage;
+                client.MessageReceived += HandleMessageReceived;
+
                 await client.LoginAsync(TokenType.Bot, BotSettings.Token);
                 await client.StartAsync();
 
-                client.MessageReceived += HandleMessageReceived;
-
-                foreach (IBotTimerService t in timers)
+                foreach (IBotTimerService timer in timers)
                 {
-                    t.Start();
+                    timer.Start();
                 }
             }
             catch (Exception ex)
@@ -96,29 +74,23 @@
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            if (disposed)
+            foreach (IBotTimerService timer in timers)
             {
-                throw new ObjectDisposedException(nameof(Bot), "Stopped performed after disposing");
+                timer.Stop();
             }
 
-            foreach (IBotTimerService t in timers)
-            {
-                t.Stop();
-            }
+            client.MessageReceived -= HandleMessageReceived;
 
             await client.LogoutAsync();
             await client.StopAsync();
+
+            client.Log -= logger.LogDiscordMessage;
         }
 
         private async Task HandleMessageReceived(SocketMessage rawMessage)
         {
             // Ignore system messages and messages from bots
-            if (!(rawMessage is SocketUserMessage message))
-            {
-                return;
-            }
-
-            if (message.Source != MessageSource.User)
+            if (!(rawMessage is SocketUserMessage message) || message.Source != MessageSource.User)
             {
                 return;
             }
@@ -128,14 +100,14 @@
             var argumentPosition = 0;
             if (!message.HasMentionPrefix(client.CurrentUser, ref argumentPosition))
             {
-                // The message @Bot will come as <@{Id}> but client.CurrentUser.Mention is <@!{Id}>
+                // The message @Bot will come as <@{Id}> but client.CurrentUser.Mention may be <@!{Id}>
                 // So to be safe check for both in case it is changed...
                 if (message.Content.Equals(client.CurrentUser.Mention)
                     || message.Content.Equals(client.CurrentUser.Mention.Replace("!", string.Empty)))
                 {
                     IResult defaultResponseResult =
                         await commandService.ExecuteDefaultResponse(commandContext, argumentPosition);
-                    await LogResult(commandContext, defaultResponseResult);
+                    await ReportError(commandContext, defaultResponseResult);
                 }
 
                 argumentPosition = 0;
@@ -148,27 +120,16 @@
 
             IResult result = await commandService.ExecuteAsync(commandContext, argumentPosition);
 
-            await LogResult(commandContext, result);
+            await ReportError(commandContext, result);
         }
 
-        private void LogEnvironment()
-        {
-            logger.LogInformation("Hosting environment: {environment} PID: {PID}", environment.EnvironmentName,
-                Process.GetCurrentProcess().Id);
-        }
-
-        private async Task LogResult(SocketCommandContext commandContext, IResult result)
+        private async Task ReportError(SocketCommandContext commandContext, IResult result)
         {
             if (result.Error.HasValue && result.Error.Value != CommandError.UnknownCommand)
             {
+                logger.LogWarning("Command failed with {error}: {reason}", result.Error, result.ErrorReason);
                 await commandContext.Channel.SendMessageAsync(result.ToString());
             }
-        }
-
-        private void LogStartup()
-        {
-            logger.LogInformation("Bot starting");
-            LogEnvironment();
         }
     }
 }

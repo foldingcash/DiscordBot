@@ -2,14 +2,22 @@
 {
     using System.IO;
     using System.Text.Json;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Options;
 
     public class BotConfigurationProvider<T> : IBotConfigurationService where T : BotConfiguration, new()
     {
+        private static readonly JsonSerializerOptions SerializerOptions = new JsonSerializerOptions
+        {
+            WriteIndented = true
+        };
+
         private readonly IOptionsMonitor<BotSettings> botSettingsMonitor;
 
-        protected T configuration;
+        private readonly SemaphoreSlim writeLock = new SemaphoreSlim(1, 1);
+
+        protected T configuration = new T();
 
         public BotConfigurationProvider(IOptionsMonitor<BotSettings> botSettingsMonitor)
         {
@@ -41,13 +49,10 @@
             var configuration = new T();
             if (File.Exists(ConfigurationPath))
             {
-                using FileStream read = File.OpenRead(ConfigurationPath);
-                using var reader = new StreamReader(ConfigurationPath);
-                string contents = await reader.ReadToEndAsync();
+                string contents = await File.ReadAllTextAsync(ConfigurationPath);
                 if (!string.IsNullOrWhiteSpace(contents))
                 {
-                    read.Position = 0;
-                    configuration = await JsonSerializer.DeserializeAsync<T>(read);
+                    configuration = JsonSerializer.Deserialize<T>(contents) ?? configuration;
                 }
             }
 
@@ -62,14 +67,16 @@
 
         protected async Task WriteConfiguration()
         {
-            using var memory = new MemoryStream();
-            await JsonSerializer.SerializeAsync(memory, configuration);
-            memory.Position = 0;
-            using var reader = new StreamReader(memory);
-
-            string data = await reader.ReadToEndAsync();
-
-            await File.WriteAllTextAsync(ConfigurationPath, data);
+            await writeLock.WaitAsync();
+            try
+            {
+                string data = JsonSerializer.Serialize(configuration, SerializerOptions);
+                await File.WriteAllTextAsync(ConfigurationPath, data);
+            }
+            finally
+            {
+                writeLock.Release();
+            }
         }
     }
 }
